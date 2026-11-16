@@ -21,7 +21,7 @@ public class PartyRequestAction
     /// <param name="toRequest">The player which receives the request.</param>
     public async ValueTask HandlePartyRequestAsync(Player player, Player toRequest)
     {
-        var isPartyMember = player.Party != null && !Equals(player.Party.PartyMaster, player);
+        var isPartyMember = false;
         if (player.CurrentMiniGame?.Definition.AllowParty is false)
         {
             await player.ShowLocalizedBlueMessageAsync(nameof(PlayerMessage.PartyNotPossibleDuringEvent)).ConfigureAwait(false);
