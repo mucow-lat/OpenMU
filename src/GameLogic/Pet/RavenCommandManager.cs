@@ -19,6 +19,7 @@ using Nito.AsyncEx;
 public class RavenCommandManager : Disposable, IPetCommandManager
 {
     private const int AttackRange = 7;
+    private const int RandomAttackRange = 4;
     private const int MaxRangeHits = 3;
 
     private readonly Player _owner;
@@ -215,10 +216,10 @@ public class RavenCommandManager : Disposable, IPetCommandManager
 
                 if (!this._owner.IsAtSafezone())
                 {
-                    if (!this.IsValidTarget(currentTarget))
+                    if (!this.IsValidTarget(currentTarget) || !currentTarget.IsInRange(this._owner.Position, RandomAttackRange))
                     {
                         var attackablesInRange = this._owner.CurrentMap?
-                            .GetAttackablesInRange(this._owner.Position, AttackRange)
+                            .GetAttackablesInRange(this._owner.Position, RandomAttackRange)
                             .OfType<AttackableNpcBase>()
                             .Where(this.IsValidTarget);
                         currentTarget = attackablesInRange?.SelectRandom();
