@@ -1,4 +1,4 @@
-﻿// <copyright file="GateNpc.cs" company="MUnique">
+// <copyright file="GateNpc.cs" company="MUnique">
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 // </copyright>
 
@@ -11,6 +11,12 @@ using System.Threading;
 /// When a player gets close to the gate, it will warp the player to the target gate,
 /// if the player is in the same party as the summoner.
 /// </summary>
+/// <remarks>
+/// MuWeb replaces OpenMU's file (server/openmu/Dockerfile): when the gate closed by itself (its minute
+/// over, the party through or the owner gone) its task disposed it and the disposal awaited that same
+/// task, so it never finished and the gate stayed on the map for good. Now the task's own disposal
+/// doesn't wait for itself, and the token source is disposed once, after its last cancel.
+/// </remarks>
 public class GateNpc : NonPlayerCharacter, ISummonable
 {
     private const int Range = 2;
@@ -18,6 +24,7 @@ public class GateNpc : NonPlayerCharacter, ISummonable
     private readonly Task _warpTask;
     private readonly CancellationTokenSource _cts;
     private int _enterCount;
+    private bool _closingFromTask;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GateNpc" /> class.
@@ -49,7 +56,15 @@ public class GateNpc : NonPlayerCharacter, ISummonable
     /// <inheritdoc />
     protected override void Dispose(bool disposing)
     {
-        this._cts.Cancel();
+        try
+        {
+            this._cts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // already disposed
+        }
+
         this._cts.Dispose();
         base.Dispose(disposing);
     }
@@ -58,9 +73,13 @@ public class GateNpc : NonPlayerCharacter, ISummonable
     protected override async ValueTask DisposeAsyncCore()
     {
         await this._cts.CancelAsync().ConfigureAwait(false);
-        this._cts.Dispose();
 
-        await this._warpTask.ConfigureAwait(false);
+        // From the task itself, awaiting it would wait forever: it only ends after this returns.
+        if (!this._closingFromTask)
+        {
+            await this._warpTask.ConfigureAwait(false);
+        }
+
         await base.DisposeAsyncCore().ConfigureAwait(false);
     }
 
@@ -119,6 +138,7 @@ public class GateNpc : NonPlayerCharacter, ISummonable
         }
         finally
         {
+            this._closingFromTask = true;
             await this.DisposeAsync().ConfigureAwait(false);
         }
     }
