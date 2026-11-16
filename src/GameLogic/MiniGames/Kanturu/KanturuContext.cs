@@ -539,6 +539,11 @@ public sealed class KanturuContext : MiniGameContext
         try
         {
             await this.ShowKanturuStateAsync(phase.State, HudHiddenDetailState).ConfigureAwait(false);
+            if (phase.StandbyDuration > TimeSpan.Zero)
+            {
+                await this.ShowTimeLimitToAllAsync(phase.StandbyDuration).ConfigureAwait(false);
+            }
+
             await this.ShowGoldenMessageIfConfiguredAsync(phase.CompletedMessageKey).ConfigureAwait(false);
             await this.DelayAsync(phase.StandbyDuration, ct).ConfigureAwait(false);
         }
