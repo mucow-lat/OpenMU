@@ -483,7 +483,7 @@ public sealed class DuelRoom : AsyncDisposable
         await this.Requester.ResetPetBehaviorAsync().ConfigureAwait(false);
 
         await this.NotifyDuelFinishedAsync().ConfigureAwait(false);
-        await Task.Delay(10000, default).ConfigureAwait(false);
+        await Task.Delay(3000, default).ConfigureAwait(false);
         await this.MovePlayersToExitAsync().ConfigureAwait(false);
     }
 }
