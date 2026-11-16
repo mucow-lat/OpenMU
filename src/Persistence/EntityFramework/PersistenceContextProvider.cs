@@ -112,7 +112,7 @@ public class PersistenceContextProvider : IMigratableDatabaseContextProvider
             await using var installationContext = new EntityDataContext();
             return (await installationContext.Database.GetAppliedMigrationsAsync(cancellationToken).ConfigureAwait(false)).Any();
         }
-        catch
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.InvalidCatalogName)
         {
             return false;
         }
