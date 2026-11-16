@@ -37,7 +37,7 @@ public partial class DiscordSetup : IDisposable
 
     private static readonly IReadOnlyList<DiscordChannelCategory> Categories = Enum.GetValues<DiscordChannelCategory>();
 
-    private static readonly IReadOnlyList<(string Code, string Name)> Languages = [("en", "English"), ("de", "Deutsch")];
+    private static readonly IReadOnlyList<(string Code, string Name)> Languages = [("en", "English"), ("de", "Deutsch"), ("es", "Español")];
 
     private readonly Dictionary<DiscordChannelCategory, string> _newWebhooks = new();
     private readonly Dictionary<DiscordChannelCategory, string> _channelIdTexts = new();

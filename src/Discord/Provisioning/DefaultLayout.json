@@ -1,27 +1,40 @@
-﻿{
-  // The default layout of the Discord server of an OpenMU game server.
+{
+  // MuWeb's Spanish layout of the Discord server, in place of OpenMU's English one
+  // (repos/OpenMU-master/src/Discord/Provisioning/DefaultLayout.json, same keys). The bot is Aurora,
+  // Mu Cow's messenger: the topics speak in her voice, between « ».
   // Existing roles, categories and channels are adopted by their name; the missing ones are created.
   "roles": [
     { "key": "gm", "name": "GM", "color": "#E67E22", "isHoisted": true },
-    { "key": "linked", "name": "Linked Player", "color": "#2ECC71" }
+    { "key": "linked", "name": "Jugador vinculado", "color": "#2ECC71" }
   ],
   "categories": [
     {
       "key": "info",
-      "name": "Info",
+      "name": "Información",
       "channels": [
-        { "key": "announcements", "name": "announcements", "topic": "News from the game masters.", "isAnnouncement": true, "isReadOnly": true, "notifications": [ "Notices" ] },
-        { "key": "events", "name": "events", "topic": "Mini games, invasions and the castle siege.", "isReadOnly": true, "notifications": [ "Events", "CastleSiege" ] },
-        { "key": "server-status", "name": "server-status", "topic": "The status of the game servers.", "isReadOnly": true, "showsStatus": true }
+        { "key": "announcements", "name": "anuncios", "topic": "«Lo que tienes que saber, te lo digo aquí primero.» Novedades oficiales de Mu Cow.", "isAnnouncement": true, "isReadOnly": true, "notifications": [ "Notices" ] },
+        { "key": "events", "name": "eventos", "topic": "«Cuando se abre una puerta, te aviso.» Blood Castle, Devil Square, Chaos Castle e invasiones.", "isReadOnly": true, "notifications": [ "Events", "CastleSiege" ] },
+        { "key": "server-status", "name": "estado-del-servidor", "topic": "«Desde aquí veo si el continente está despierto.» El estado de los servidores, al día.", "isReadOnly": true, "showsStatus": true }
       ]
     },
     {
       "key": "community",
-      "name": "Community",
+      "name": "Comunidad",
       "channels": [
-        { "key": "world-news", "name": "world-news", "topic": "Boss kills, rare drops and level milestones.", "isReadOnly": true, "notifications": [ "WorldNews" ] },
-        { "key": "world-chat", "name": "world-chat", "topic": "The world chat of the game.", "isWorldChat": true },
-        { "key": "general", "name": "general" }
+        { "key": "general", "name": "general", "topic": "«Siéntate junto a la fuente, viajero.» Conversa de lo que quieras." },
+        { "key": "world-news", "name": "noticias-del-mundo", "topic": "«Lo que veo desde arriba: jefes caídos, tesoros encontrados, héroes que crecen.»", "isReadOnly": true, "notifications": [ "WorldNews" ] },
+        { "key": "world-chat", "name": "chat-mundial", "topic": "«Lo que se dice aquí, se oye en todo el continente.» Conectado al chat mundial del juego (/world).", "isWorldChat": true }
+      ]
+    },
+    {
+      "key": "players",
+      "name": "Jugadores",
+      "channels": [
+        { "key": "commands", "name": "comandos", "topic": "«Pregúntame lo que quieras.» /online, /who, /guild, /rank y /events." },
+        { "key": "trade", "name": "comercio", "topic": "«Todo tiene su precio.» Compra, vende e intercambia. Los tratos se cierran en el juego; Mu Cow no responde por acuerdos entre jugadores." },
+        { "key": "party", "name": "busco-party", "topic": "«Nadie llega lejos solo.» Busca party, guild o compañeros para los eventos." },
+        { "key": "bugs", "name": "bugs", "topic": "«Si algo en el mundo se rompe, cuéntamelo.» Qué pasó, dónde y cómo repetirlo; una captura ayuda mucho." },
+        { "key": "suggestions", "name": "sugerencias", "topic": "«Tus ideas también dan forma a Mu Cow.» Propón cambios y vota con reacciones." }
       ]
     },
     {
@@ -35,8 +48,8 @@
       "name": "Staff",
       "visibleTo": [ "gm" ],
       "channels": [
-        { "key": "staff-alerts", "name": "staff-alerts", "isReadOnly": true, "notifications": [ "StaffAlerts" ] },
-        { "key": "gm-commands", "name": "gm-commands" }
+        { "key": "staff-alerts", "name": "alertas-staff", "topic": "Registro de los comandos de GM usados desde Discord.", "isReadOnly": true, "notifications": [ "StaffAlerts" ] },
+        { "key": "gm-commands", "name": "comandos-gm", "topic": "/announce, /kick y /ban. Cada uso queda en #alertas-staff." }
       ]
     }
   ]
