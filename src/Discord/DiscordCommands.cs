@@ -222,6 +222,11 @@ public sealed class DiscordCommands
 
     private async ValueTask<DiscordEmbed> RankAsync()
     {
+        if (await MuWebRanking.DescriptionAsync().ConfigureAwait(false) is { } muweb)
+        {
+            return this.Answer(this.Text(nameof(Resources.Rank_Title)), muweb);
+        }
+
         var ranking = await this._data.GetRankingAsync(RankingSize).ConfigureAwait(false);
         var description = ranking.Count == 0
             ? this.Text(nameof(Resources.Rank_Empty))

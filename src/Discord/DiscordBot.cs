@@ -365,7 +365,7 @@ public sealed partial class DiscordBot : IManageableServer, IDiscordMessenger, I
         if (this._settings.GuildId is { } guildId && client.GetGuild(guildId) is { } guild)
         {
             // Keep immediate availability on the main Discord server.
-            await guild.BulkOverwriteApplicationCommandAsync(commands).ConfigureAwait(false);
+            await guild.BulkOverwriteApplicationCommandAsync([]).ConfigureAwait(false);
         }
     }
 
