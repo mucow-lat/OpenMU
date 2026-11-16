@@ -114,11 +114,11 @@ public sealed class DiscordMessageFormatter
                     this.Translate(e.CharacterClassName),
                     e.Level),
                 MilestoneColor)),
-            GlobalNoticeEvent e => (DiscordChannelCategory.Notices, this.CreateEmbed(
+            GlobalNoticeEvent e => (DiscordChannelCategory.Events, this.CreateEmbed(
                 e,
-                this.Format(nameof(Resources.GlobalNotice_Title)),
+                Escape(e.SenderName),
                 Escape(e.Message),
-                NoticeColor)),
+                EventColor)),
             _ => null,
         };
     }

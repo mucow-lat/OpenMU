@@ -193,7 +193,7 @@ public class GameEventPublisherPlugIn
 
         if (messageType == ChatMessageType.GlobalNotification)
         {
-            return this.Configuration?.PublishGlobalNotices is true
+            return false
                 ? context.EventPublisher.GameEventAsync(new GlobalNoticeEvent(context.Id, DateTime.UtcNow, sender.Name, message.TrimStart('!')))
                 : ValueTask.CompletedTask;
         }
