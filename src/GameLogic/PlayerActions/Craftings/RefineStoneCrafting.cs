@@ -143,12 +143,12 @@ public class RefineStoneCrafting : SimpleItemCraftingHandler
         var result = new List<Item>();
         if (higherRefineStoneItems > 0)
         {
-            result.AddRange(await this.CreateRefineStonesAsync(higherRefineStoneItems, 50, 44, player).ConfigureAwait(false));
+            result.AddRange(await this.CreateRefineStonesAsync(higherRefineStoneItems, 75, 44, player).ConfigureAwait(false));
         }
 
         if (lowerRefineStoneItems > 0)
         {
-            result.AddRange(await this.CreateRefineStonesAsync(lowerRefineStoneItems, 20, 43, player).ConfigureAwait(false));
+            result.AddRange(await this.CreateRefineStonesAsync(lowerRefineStoneItems, 40, 43, player).ConfigureAwait(false));
         }
 
         return result;
