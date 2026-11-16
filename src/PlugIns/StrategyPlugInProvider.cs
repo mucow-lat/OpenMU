@@ -93,6 +93,15 @@ public class StrategyPlugInProvider<TKey, TPlugIn> : PlugInContainerBase<TPlugIn
         if (this._effectiveStrategies.TryGetValue(plugIn.Key, out var effective) && effective == plugIn)
         {
             this._effectiveStrategies.Remove(plugIn.Key);
+
+            // MuWeb: another active plugin with the same key was skipped when it got activated
+            // (this one was registered first); it takes over now, else the key is left with none.
+            var successor = this.ActivePlugIns.FirstOrDefault(p => p != plugIn && Equals(p.Key, plugIn.Key));
+            if (successor is not null)
+            {
+                this.SetEffectivePlugin(successor);
+                this.Logger.LogInformation($"Plugin {successor} with key {plugIn.Key} is effective now, {plugIn} was deactivated.");
+            }
         }
     }
 
