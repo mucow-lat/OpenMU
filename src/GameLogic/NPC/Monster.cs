@@ -273,6 +273,7 @@ public sealed class Monster : AttackableNpcBase, IAttackable, IAttacker, ISuppor
 
         var newX = this.Position.X + moveByX;
         var newY = this.Position.Y + moveByY;
+        (newX, newY) = MonsterLeash.Apply(this.SpawnArea, this.Position, newX, newY);
         byte randx = (byte)Math.Min(0xFF, Math.Max(0, newX));
         byte randy = (byte)Math.Min(0xFF, Math.Max(0, newY));
 
