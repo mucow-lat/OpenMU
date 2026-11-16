@@ -161,15 +161,18 @@ public static class ItemExtensions
             (definition.ItemSlot!.ItemSlots.Contains(InventoryConstants.RightHandSlot) && definition.ItemSlot.ItemSlots.Contains(InventoryConstants.LeftHandSlot))
             || definition.Group == ShieldItemGroup;
 
+        static bool IsTwoHanded(ItemDefinition? definition) =>
+            definition is not null && (definition.Width >= 2 || definition.BasePowerUpAttributes.Any(p => p.TargetAttribute?.Id == Stats.IsTwoHandedWeaponEquipped.Id));
+
         var rightHandItemDefinition = inventory.GetItem(InventoryConstants.RightHandSlot)?.Definition;
 
         return (toSlot == InventoryConstants.LeftHandSlot
-                && itemDefinition.Width >= 2
+                && IsTwoHanded(itemDefinition)
                 && rightHandItemDefinition is not null
                 && !rightHandItemDefinition.IsAmmunition)
                || (toSlot == InventoryConstants.RightHandSlot
                    && IsOneHandedOrShield(itemDefinition)
-                   && inventory.GetItem(InventoryConstants.LeftHandSlot)?.Definition?.Width >= 2);
+                   && IsTwoHanded(inventory.GetItem(InventoryConstants.LeftHandSlot)?.Definition));
     }
 
     /// <summary>
