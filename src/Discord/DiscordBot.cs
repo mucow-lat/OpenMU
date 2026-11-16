@@ -335,6 +335,7 @@ public sealed partial class DiscordBot : IManageableServer, IDiscordMessenger, I
         await this.ReloadChatBindingsAsync().ConfigureAwait(false);
         this.ServerState = ServerState.Started;
         this._ready.TrySetResult();
+        this.ConnectMuWeb(client);
         await this.ProcessPendingRoleRevocationsAsync(true).ConfigureAwait(false);
         await this.CreateMissingHostedChannelsAsync().ConfigureAwait(false);
 
