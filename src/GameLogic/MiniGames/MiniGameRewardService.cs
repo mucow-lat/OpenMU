@@ -212,6 +212,7 @@ internal sealed class MiniGameRewardService
                 return;
             }
 
+            MiniGameTicketLevel.Apply(this._gameContext, player, reward.ItemReward, item);
             if (!drop && player.Inventory is { } inventory
                 && inventory.CheckInvSpace(item) is { } slot
                 && await inventory.AddItemAsync(slot, item).ConfigureAwait(false))
