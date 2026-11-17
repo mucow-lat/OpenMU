@@ -726,6 +726,7 @@ internal sealed class Program : IDisposable
         else
         {
             contextProvider = await this.PrepareRepositoryProviderAsync(args.Contains("-reinit"), version, loggerFactory, changeListener).ConfigureAwait(false);
+            await this.ReconcileConfigurationAsync(loggerFactory).ConfigureAwait(false);
         }
 
         await this.ReadSystemConfigurationAsync(contextProvider).ConfigureAwait(false);
@@ -835,6 +836,36 @@ internal sealed class Program : IDisposable
 
         await updateService.ApplyUpdatesAsync(updates, new Progress<(Guid CurrentUpdatingKey, bool IsCompleted)>()).ConfigureAwait(false);
         Console.WriteLine("The mandatory configuration updates have been successfully applied.");
+    }
+
+    /// <summary>
+    /// Runs the active <see cref="IConfigurationReconcilePlugIn"/>s, after the database got its initial data or its
+    /// mandatory updates, and before the game servers start.
+    /// </summary>
+    /// <param name="loggerFactory">The logger factory.</param>
+    private async Task ReconcileConfigurationAsync(ILoggerFactory loggerFactory)
+    {
+        // As for the updates: nothing listens to the changes yet.
+        var contextProvider = new PersistenceContextProvider(loggerFactory, null);
+        if (!await contextProvider.ConfigurationExistsAsync().ConfigureAwait(false))
+        {
+            return;
+        }
+
+        var plugInManager = new PlugInManager(null, loggerFactory, null, null);
+        plugInManager.DiscoverAndRegisterPlugInsOf<IConfigurationReconcilePlugIn>();
+        var typeIds = plugInManager.KnownPlugInTypes.Select(type => type.GUID).ToHashSet();
+        using (var context = contextProvider.CreateNewTypedContext(typeof(PlugInConfiguration), false))
+        {
+            var configurations = await context.GetAsync<PlugInConfiguration>().ConfigureAwait(false);
+            plugInManager.ReadConfigurations(configurations.Where(configuration => typeIds.Contains(configuration.TypeId)));
+        }
+
+        foreach (var plugIn in plugInManager.GetActivePlugInsOf<IConfigurationReconcilePlugIn>())
+        {
+            this._logger.Information("Reconciling the configuration with {PlugIn}...", plugIn.GetType().Name);
+            await plugIn.ReconcileAsync(contextProvider).ConfigureAwait(false);
+        }
     }
 
     private async Task ReadSystemConfigurationAsync(IPersistenceContextProvider persistenceContextProvider)
