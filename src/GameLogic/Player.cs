@@ -799,8 +799,11 @@ public class Player : AsyncDisposable, IBucketMapObserver, IAttackable, IAttacke
             return null;
         }
 
-        if (!this.GameContext.PvpEnabled && this.CurrentMap?.Definition.BattleZone == null &&
-            this.CurrentMiniGame?.AllowPlayerKilling is false)
+        if (!this.GameContext.PvpEnabled
+            && (attacker as Player ?? (attacker as IPlayerSurrogate)?.Owner) is { } attackingPlayer
+            && attackingPlayer != this
+            && this.CurrentMap?.Definition.BattleZone == null
+            && this.CurrentMiniGame?.AllowPlayerKilling is not true)
         {
             return null;
         }
