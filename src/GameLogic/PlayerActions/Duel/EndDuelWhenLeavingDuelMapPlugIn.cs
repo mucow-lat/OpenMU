@@ -54,7 +54,8 @@ public class EndDuelWhenLeavingDuelMapPlugIn : IObjectRemovedFromMapPlugIn
         }
 
         var config = player.GameContext.Configuration.DuelConfiguration;
-        var isInDuelMap = config?.DuelAreas.Any(area => area.SpectatorsGate?.Map == player.CurrentMap?.Definition) ?? false;
+        // MuWeb: the map it left, not the one it may be on already.
+        var isInDuelMap = config?.DuelAreas.Any(area => area.SpectatorsGate?.Map == map.Definition) ?? false;
         if (!isInDuelMap)
         {
             return;

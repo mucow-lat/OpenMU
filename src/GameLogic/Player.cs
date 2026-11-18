@@ -735,7 +735,16 @@ public class Player : AsyncDisposable, IBucketMapObserver, IAttackable, IAttacke
 
             this.ReleaseSkillList();
 
-            if (this.DuelRoom is { State: DuelState.DuelStarted } duelRoom)
+            if (this.DuelRoom is { } spectatedRoom && !spectatedRoom.IsDuelist(this))
+            {
+                // MuWeb: a spectator leaving the game leaves the stand, not the duel.
+                await spectatedRoom.RemoveSpectatorAsync(this).ConfigureAwait(false);
+                if (this.GameContext.Configuration.DuelConfiguration?.Exit is { } spectatorExit)
+                {
+                    await this._mapTransitions.PlaceAtGateAsync(spectatorExit).ConfigureAwait(false);
+                }
+            }
+            else if (this.DuelRoom is { State: DuelState.DuelStarted } duelRoom)
             {
                 await duelRoom.CancelDuelAsync().ConfigureAwait(false);
                 if (this.GameContext.Configuration.DuelConfiguration?.Exit is { } exit)

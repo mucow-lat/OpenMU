@@ -28,10 +28,7 @@ public static class PlayerInvisibilityExtensions
             var magicEffect = new MagicEffect(TimeSpan.FromSeconds(duration.Value), invisibleEffect, powerUps.Select(p => new MagicEffect.ElementWithTarget(p.BuffPowerUp, p.Target)).ToArray());
             await player.MagicEffectList.AddEffectAsync(magicEffect).ConfigureAwait(false);
 
-            if (player.CurrentMap is { } currentMap)
-            {
-                await currentMap.RespawnAsync(player).ConfigureAwait(false);
-            }
+            await RespawnIfOnMapAsync(player).ConfigureAwait(false);
         }
     }
 
@@ -53,7 +50,18 @@ public static class PlayerInvisibilityExtensions
         }
 
         await activeEffect.DisposeAsync().ConfigureAwait(false);
-        if (player.CurrentMap is { } currentMap)
+        await RespawnIfOnMapAsync(player).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Shows the player again to the others on its map, so they see it (dis)appear; nothing while it is
+    /// between maps. MuWeb: a duel's spectator leaving warps out, and the duel map's ObjectRemoved (its
+    /// EndDuelWhenLeavingDuelMapPlugIn) took the invisibility off while CurrentMap still named the duel
+    /// map, so the respawn put the player back on it, now visible: the duelists kept seeing it there.
+    /// </summary>
+    private static async ValueTask RespawnIfOnMapAsync(Player player)
+    {
+        if (player.CurrentMap is { } currentMap && ReferenceEquals(currentMap.GetObject(player.Id), player))
         {
             await currentMap.RespawnAsync(player).ConfigureAwait(false);
         }

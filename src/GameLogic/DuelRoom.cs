@@ -207,10 +207,16 @@ public sealed class DuelRoom : AsyncDisposable
             }
         }
 
-        for (int j = this.Spectators.Count; j >= 0; --j)
+        // MuWeb: the loop started one past the end and threw, so a spectator never left.
+        for (int j = this.Spectators.Count - 1; j >= 0; --j)
         {
             var player = this.Spectators[j];
             await player.InvokeViewPlugInAsync<IDuelSpectatorRemovedPlugIn>(p => p.SpectatorRemovedAsync(spectator)).ConfigureAwait(false);
+        }
+
+        if (spectator.DuelRoom == this)
+        {
+            spectator.DuelRoom = null;
         }
 
         await spectator.InvokeViewPlugInAsync<IDuelEndedPlugIn>(p => p.DuelEndedAsync()).ConfigureAwait(false);
@@ -343,6 +349,9 @@ public sealed class DuelRoom : AsyncDisposable
             this.Spectators.Add(player);
         }
 
+        // MuWeb: the spectator belongs to the room, so it can quit (DuelActions) and leaves with it.
+        player.DuelRoom = this;
+
         await player.AddInvisibleEffectAsync().ConfigureAwait(false);
         await player.WarpToAsync(spectatorsGate).ConfigureAwait(false);
 
@@ -413,6 +422,18 @@ public sealed class DuelRoom : AsyncDisposable
             await this.MovePlayersToExitAsync().ConfigureAwait(false);
 
             await this.Requester.GameContext.DuelRoomManager.GiveBackDuelRoomAsync(this).ConfigureAwait(false);
+        }
+
+        // MuWeb: the spectators see again and are seen: out of the room with the end of its duel.
+        Player[] spectators;
+        using (await this._spectatorLock.LockAsync().ConfigureAwait(false))
+        {
+            spectators = this.Spectators.ToArray();
+        }
+
+        foreach (var spectator in spectators)
+        {
+            await this.RemoveSpectatorAsync(spectator).ConfigureAwait(false);
         }
 
         this.AllPlayers.ForEach(p => p.DuelRoom = null);

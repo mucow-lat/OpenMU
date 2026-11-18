@@ -134,6 +134,12 @@ public class DuelActions
             return;
         }
 
+        // MuWeb: a spectator belongs to the room too, but only the duelists stop a duel.
+        if (!duelRoom.IsDuelist(player))
+        {
+            return;
+        }
+
         if (duelRoom.State is DuelState.DuelFinished)
         {
             player.Logger.LogWarning($"Player {player.Name} sent request to stop the duel, but it is already finished.");
