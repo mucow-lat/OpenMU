@@ -4,11 +4,13 @@
 
 namespace MUnique.OpenMU.Discord;
 
+using System.Globalization;
 using System.Net.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MUnique.OpenMU.DataModel.Configuration;
+using MUnique.OpenMU.DataModel.Entities;
 using MUnique.OpenMU.Discord.ChatBridge;
 using MUnique.OpenMU.Discord.Provisioning;
 using MUnique.OpenMU.GameLogic.AccountLinking;
@@ -126,9 +128,24 @@ public static class DiscordServiceCollectionExtensions
                 useBot ? provider.GetRequiredService<DiscordBot>() : null,
                 serverId => provider.GetRequiredService<IServerProvider>().Servers.OfType<IGameServer>().FirstOrDefault(server => server.Id == serverId)?.Description,
                 guildId => provider.GetRequiredService<IGuildServer>().GetPersistentGuildNameAsync(guildId),
-                provider.GetRequiredService<ILoggerFactory>()));
+                provider.GetRequiredService<ILoggerFactory>(),
+                getContactUser: GetContactUserFunction(provider)));
         }
 
         return services;
+    }
+
+    /// <summary>
+    /// Gets the function which gets the linked Discord user of an account, if its player turned on <see cref="AccountNotificationTypes.PublicContact"/>.
+    /// </summary>
+    private static Func<Guid, ValueTask<ulong?>> GetContactUserFunction(IServiceProvider provider)
+    {
+        var linkService = new AccountLinkService(() => provider.GetRequiredService<IPersistenceContextProvider>().CreateNewPlayerContext(new GameConfiguration()));
+        return async accountId =>
+            await linkService.GetLinkAsync(accountId, AccountLinkService.DiscordProvider).ConfigureAwait(false) is { } link
+            && link.Notifications.HasFlag(AccountNotificationTypes.PublicContact)
+            && ulong.TryParse(link.ExternalUserId, NumberStyles.None, CultureInfo.InvariantCulture, out var userId)
+                ? (ulong?)userId
+                : null;
     }
 }

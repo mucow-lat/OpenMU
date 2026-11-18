@@ -27,6 +27,11 @@ public static class AccountNotificationKeywords
     public const string FriendOnline = "friend";
 
     /// <summary>
+    /// The keyword of <see cref="AccountNotificationTypes.PublicContact"/>.
+    /// </summary>
+    public const string PublicContact = "contact";
+
+    /// <summary>
     /// Gets the type of a keyword.
     /// </summary>
     /// <param name="keyword">The keyword.</param>
@@ -36,6 +41,7 @@ public static class AccountNotificationKeywords
         LoginAttempt => AccountNotificationTypes.LoginAttempt,
         LetterReceived => AccountNotificationTypes.LetterReceived,
         FriendOnline => AccountNotificationTypes.FriendOnline,
+        PublicContact => AccountNotificationTypes.PublicContact,
         _ => AccountNotificationTypes.None,
     };
 
@@ -60,6 +66,11 @@ public static class AccountNotificationKeywords
         if (types.HasFlag(AccountNotificationTypes.FriendOnline))
         {
             keywords.Add(FriendOnline);
+        }
+
+        if (types.HasFlag(AccountNotificationTypes.PublicContact))
+        {
+            keywords.Add(PublicContact);
         }
 
         return keywords.Count > 0 ? string.Join(", ", keywords) : "-";

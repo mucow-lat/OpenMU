@@ -1310,5 +1310,50 @@ namespace MUnique.OpenMU.Discord.Properties {
                 return ResourceManager.GetString("Test_Title", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Skill.
+        /// </summary>
+        public static string ItemDropped_Skill {
+            get {
+                return ResourceManager.GetString("ItemDropped_Skill", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Ancient set: {0}.
+        /// </summary>
+        public static string ItemDropped_AncientSet {
+            get {
+                return ResourceManager.GetString("ItemDropped_AncientSet", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Contact: {0}.
+        /// </summary>
+        public static string ItemDropped_Contact {
+            get {
+                return ResourceManager.GetString("ItemDropped_Contact", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Interested? Ask **{0}** in the game..
+        /// </summary>
+        public static string ItemDropped_AskInGame {
+            get {
+                return ResourceManager.GetString("ItemDropped_AskInGame", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to My Discord in rare drops.
+        /// </summary>
+        public static string Notify_Type_Contact {
+            get {
+                return ResourceManager.GetString("Notify_Type_Contact", resourceCulture);
+            }
+        }
     }
 }

@@ -112,6 +112,11 @@ public sealed class DiscordAccountCommands
                 names.Add(DiscordCommands.GetText(this._culture, nameof(Resources.Notify_Type_Friend)));
             }
 
+            if (types.HasFlag(AccountNotificationTypes.PublicContact))
+            {
+                names.Add(DiscordCommands.GetText(this._culture, nameof(Resources.Notify_Type_Contact)));
+            }
+
             var list = names.Count > 0 ? string.Join(", ", names) : DiscordCommands.GetText(this._culture, nameof(Resources.Notify_None));
             return this.Answer(nameof(Resources.Notify_Changed), [], list).Embed;
         }

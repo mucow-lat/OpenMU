@@ -5,8 +5,12 @@
 namespace MUnique.OpenMU.Discord;
 
 using System.Globalization;
+using System.Reflection;
 using System.Text;
+using MUnique.OpenMU.AttributeSystem;
+using MUnique.OpenMU.DataModel.Configuration.Items;
 using MUnique.OpenMU.Discord.Properties;
+using MUnique.OpenMU.GameLogic.Attributes;
 using MUnique.OpenMU.Interfaces;
 
 /// <summary>
@@ -46,9 +50,33 @@ public sealed class DiscordMessageFormatter
 
     private const string MarkdownCharacters = @"\*_~`|>[]()#";
 
+    /// <summary>
+    /// The names of the <see cref="Stats"/> by their identifiers, which name the resources of the item options, e.g. <c>ItemOption_Excellent_ExcellentDamageChance</c>.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<Guid, string> StatNames = typeof(Stats)
+        .GetProperties(BindingFlags.Public | BindingFlags.Static)
+        .Where(property => property.PropertyType == typeof(AttributeDefinition))
+        .Select(property => (Attribute: (AttributeDefinition?)property.GetValue(null), property.Name))
+        .Where(stat => stat.Attribute is not null)
+        .GroupBy(stat => stat.Attribute!.Id)
+        .ToDictionary(group => group.Key, group => group.First().Name);
+
+    /// <summary>
+    /// The names of the option types in the resources of the item options.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<Guid, string> OptionTypeNames = new Dictionary<Guid, string>
+    {
+        { ItemOptionTypes.Excellent.Id, "Excellent" },
+        { ItemOptionTypes.Option.Id, "Option" },
+        { ItemOptionTypes.Luck.Id, "Luck" },
+        { ItemOptionTypes.AncientBonus.Id, "AncientBonus" },
+        { ItemOptionTypes.Wing.Id, "Wing" },
+    };
+
     private readonly CultureInfo _culture;
     private readonly Func<byte, string?> _getServerName;
     private readonly Func<Guid, ValueTask<string?>> _getGuildName;
+    private readonly Func<Guid, ValueTask<ulong?>>? _getContactUser;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DiscordMessageFormatter"/> class.
@@ -56,11 +84,13 @@ public sealed class DiscordMessageFormatter
     /// <param name="culture">The culture of the messages.</param>
     /// <param name="getServerName">The function which gets the name of a game server by its identifier.</param>
     /// <param name="getGuildName">The function which gets the name of a guild by its persistent identifier.</param>
-    public DiscordMessageFormatter(CultureInfo culture, Func<byte, string?> getServerName, Func<Guid, ValueTask<string?>> getGuildName)
+    /// <param name="getContactUser">The function which gets the Discord user of an account, if its player wants to be contacted about their rare drops.</param>
+    public DiscordMessageFormatter(CultureInfo culture, Func<byte, string?> getServerName, Func<Guid, ValueTask<string?>> getGuildName, Func<Guid, ValueTask<ulong?>>? getContactUser = null)
     {
         this._culture = culture;
         this._getServerName = getServerName;
         this._getGuildName = getGuildName;
+        this._getContactUser = getContactUser;
     }
 
     /// <summary>
@@ -95,11 +125,7 @@ public sealed class DiscordMessageFormatter
             CastleSiegeStateChangedEvent e => await this.FormatCastleSiegeAsync(e).ConfigureAwait(false) is { } embed
                 ? (DiscordChannelCategory.CastleSiege, embed)
                 : null,
-            MonsterItemDroppedEvent e => (DiscordChannelCategory.WorldNews, this.CreateEmbed(
-                e,
-                this.Format(nameof(Resources.ItemDropped_Title)),
-                this.Format(nameof(Resources.ItemDropped_Description), Escape(e.KillerName), this.GetItemName(e), this.Translate(e.MonsterName), this.Translate(e.MapName)),
-                ItemDropColor)),
+            MonsterItemDroppedEvent e => (DiscordChannelCategory.WorldNews, await this.FormatItemDropAsync(e).ConfigureAwait(false)),
             BossKilledEvent e => (DiscordChannelCategory.WorldNews, this.CreateEmbed(
                 e,
                 this.Format(nameof(Resources.BossKilled_Title)),
@@ -178,6 +204,67 @@ public sealed class DiscordMessageFormatter
         var serverName = this._getServerName(gameEvent.ServerId);
         var footer = serverName is null ? null : this.Format(nameof(Resources.ServerFooter), serverName);
         return new DiscordEmbed(title, description, color, gameEvent.TimestampUtc, footer);
+    }
+
+    private async ValueTask<DiscordEmbed> FormatItemDropAsync(MonsterItemDroppedEvent e)
+    {
+        var description = new StringBuilder(this.Format(nameof(Resources.ItemDropped_Description), Escape(e.KillerName), this.GetItemName(e), this.Translate(e.MonsterName), this.Translate(e.MapName)));
+        var lines = new List<string>();
+        if (e.HasSkill)
+        {
+            lines.Add(this.Format(nameof(Resources.ItemDropped_Skill)));
+        }
+
+        lines.AddRange(e.Options.Select(this.GetOptionText).OfType<string>().Distinct());
+        if (e.AncientSetName is { } setName)
+        {
+            lines.Add(this.Format(nameof(Resources.ItemDropped_AncientSet), this.Translate(setName)));
+        }
+
+        if (lines.Count > 0)
+        {
+            description.Append('\n');
+            foreach (var line in lines)
+            {
+                description.Append("\n• ").Append(line);
+            }
+        }
+
+        var contact = e.KillerAccountId is { } accountId && this._getContactUser is { } getContactUser
+            ? await getContactUser(accountId).ConfigureAwait(false)
+            : null;
+        description.Append("\n\n").Append(contact is { } userId
+            ? this.Format(nameof(Resources.ItemDropped_Contact), $"<@{userId}>")
+            : this.Format(nameof(Resources.ItemDropped_AskInGame), Escape(e.KillerName)));
+
+        return this.CreateEmbed(e, this.Format(nameof(Resources.ItemDropped_Title)), description.ToString(), ItemDropColor);
+    }
+
+    /// <summary>
+    /// Gets the text of an item option, from the resource of its type and attribute, e.g. <c>ItemOption_Excellent_ExcellentDamageChance</c>;
+    /// the attribute's name and value, if there is none.
+    /// </summary>
+    private string? GetOptionText(DroppedItemOption option)
+    {
+        OptionTypeNames.TryGetValue(option.TypeId, out var typeName);
+        if (typeName == "Luck")
+        {
+            return this.Format("ItemOption_Luck");
+        }
+
+        // Factors are shown as percent, e.g. 1.04 as 4; fractions too, e.g. 0.1 as 10.
+        var value = option.IsMultiplier ? (option.Value - 1) * 100 : option.Value is > 0 and < 1 ? option.Value * 100 : option.Value;
+        var number = Math.Round(value, 2).ToString("0.##", this._culture);
+        var statName = option.AttributeId is { } attributeId && StatNames.TryGetValue(attributeId, out var name) ? name : null;
+        var text = typeName is not null && statName is not null
+            ? Resources.ResourceManager.GetString($"ItemOption_{typeName}_{statName}", this._culture)
+            : null;
+        if (text is not null)
+        {
+            return string.Format(this._culture, text, number);
+        }
+
+        return string.IsNullOrEmpty(option.AttributeName) ? null : $"{Escape(option.AttributeName)} +{number}";
     }
 
     private string GetItemName(MonsterItemDroppedEvent e)

@@ -590,7 +590,7 @@ namespace MUnique.OpenMU.GameLogic.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Direct messages in Discord about: {0}. Turn them on or off with /discord notify login, letter or friend..
+        ///   Looks up a localized string similar to Direct messages in Discord about: {0}. Turn them on or off with /discord notify login, letter or friend; /discord notify contact shows your Discord in the news of your rare drops..
         /// </summary>
         public static string DiscordNotifications {
             get {

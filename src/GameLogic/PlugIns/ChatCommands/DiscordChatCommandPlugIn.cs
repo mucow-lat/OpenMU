@@ -15,7 +15,8 @@ using MUnique.OpenMU.PlugIns;
 /// A chat command plugin which links the account of the player to a Discord user.
 /// <c>/discord link</c> creates a one-time code, which the player enters in Discord with <c>/link</c>.
 /// <c>/discord unlink</c> removes the link, and <c>/discord</c> shows it.
-/// <c>/discord notify letter</c> turns the direct messages about letters on or off; <c>login</c> and <c>friend</c> are the other types.
+/// <c>/discord notify letter</c> turns the direct messages about letters on or off; <c>login</c> and <c>friend</c> are the other types;
+/// <c>contact</c> shows the linked Discord user in the news of the rare drops of the player.
 /// </summary>
 [Guid("6694D50F-49B1-481D-8F65-B0D7DCCA77C3")]
 [PlugIn]

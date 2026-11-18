@@ -1062,6 +1062,6 @@ Ampliaciones de inventario: {18}</value>
     <value>El chat de tu alianza se refleja en Discord. Los miembros que vincularon su usuario de Discord pueden leerlo y escribir ahí.</value>
   </data>
   <data name="DiscordNotifications" xml:space="preserve">
-    <value>Mensajes directos en Discord sobre: {0}. Actívalos o desactívalos con /discord notify login, letter o friend.</value>
+    <value>Mensajes directos en Discord sobre: {0}. Actívalos o desactívalos con /discord notify login, letter o friend; /discord notify contact muestra tu Discord en las noticias de tus drops raros.</value>
   </data>
 </root>

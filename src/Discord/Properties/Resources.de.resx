@@ -516,4 +516,7 @@
   <data name="Bind_AlreadyBound" xml:space="preserve">
     <value>Der Chat von {0} ist bereits mit {1} verbunden. Verwende zuerst /guildchat unbind in diesem Kanal.</value>
   </data>
+  <data name="Notify_Type_Contact" xml:space="preserve">
+    <value>Mein Discord bei seltenen Drops</value>
+  </data>
 </root>

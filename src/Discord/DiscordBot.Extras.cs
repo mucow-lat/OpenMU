@@ -51,7 +51,8 @@ public sealed partial class DiscordBot
                 .WithRequired(true)
                 .AddChoice(this._commands.Text(nameof(Resources.Notify_Type_Login)), AccountNotificationKeywords.LoginAttempt)
                 .AddChoice(this._commands.Text(nameof(Resources.Notify_Type_Letter)), AccountNotificationKeywords.LetterReceived)
-                .AddChoice(this._commands.Text(nameof(Resources.Notify_Type_Friend)), AccountNotificationKeywords.FriendOnline))
+                .AddChoice(this._commands.Text(nameof(Resources.Notify_Type_Friend)), AccountNotificationKeywords.FriendOnline)
+                .AddChoice(this._commands.Text(nameof(Resources.Notify_Type_Contact)), AccountNotificationKeywords.PublicContact))
             .AddOption(NotifyEnabledOptionName, ApplicationCommandOptionType.Boolean, this._commands.Text(nameof(Resources.Command_Notify_EnabledOption)), isRequired: true)
             .Build();
     }

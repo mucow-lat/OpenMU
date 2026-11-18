@@ -5,7 +5,9 @@
 namespace MUnique.OpenMU.Tests.Discord;
 
 using System.Globalization;
+using MUnique.OpenMU.DataModel.Configuration.Items;
 using MUnique.OpenMU.Discord;
+using MUnique.OpenMU.GameLogic.Attributes;
 using MUnique.OpenMU.Interfaces;
 
 /// <summary>
@@ -56,7 +58,53 @@ public class DiscordMessageFormatterTest
 
         var message = await formatter.FormatAsync(new MonsterItemDroppedEvent(1, DateTime.UtcNow, "Hero", "Kundun", "Kalima 7", "Sword of Destruction", 9, true, true)).ConfigureAwait(false);
 
-        Assert.That(message?.Embed.Description, Is.EqualTo("**Hero** found **Excellent Ancient Sword of Destruction +9** from Kundun in Kalima 7."));
+        Assert.That(message?.Embed.Description, Does.StartWith("**Hero** found **Excellent Ancient Sword of Destruction +9** from Kundun in Kalima 7."));
+    }
+
+    /// <summary>
+    /// Tests that an item drop lists the options of the item and mentions the Discord user of a player who wants to be contacted.
+    /// </summary>
+    [Test]
+    public async Task ItemDropListsOptionsAndContactAsync()
+    {
+        var accountId = Guid.NewGuid();
+        var formatter = CreateFormatter("es", id => ValueTask.FromResult<ulong?>(id == accountId ? 1234UL : null));
+        var drop = new MonsterItemDroppedEvent(1, DateTime.UtcNow, "Hero", "Kundun", "Kalima 7", "Sword of Destruction", 9, true, false)
+        {
+            KillerAccountId = accountId,
+            HasSkill = true,
+            Options =
+            [
+                new DroppedItemOption(ItemOptionTypes.Luck.Id, Stats.CriticalDamageChance.Id, "Critical Damage Chance", 0.05f, false),
+                new DroppedItemOption(ItemOptionTypes.Option.Id, Stats.PhysicalBaseDmg.Id, "Physical Base Damage (min and max)", 12, false),
+                new DroppedItemOption(ItemOptionTypes.Excellent.Id, Stats.ExcellentDamageChance.Id, "Excellent Damage Chance", 0.1f, false),
+                new DroppedItemOption(ItemOptionTypes.Excellent.Id, Stats.PhysicalBaseDmgIncrease.Id, "Physical Base Damage Increase", 1.02f, true),
+            ],
+        };
+
+        var message = await formatter.FormatAsync(drop).ConfigureAwait(false);
+
+        Assert.That(message?.Embed.Description, Does.EndWith(
+            "\n\n• Skill\n• Suerte (tasa de daño crítico +5%)\n• Daño adicional +12\n• Tasa de daño excelente +10%\n• Daño +2%\n\nContacto: <@1234>"));
+    }
+
+    /// <summary>
+    /// Tests that an item drop of a player who doesn't want to be contacted on Discord says to ask in the game.
+    /// </summary>
+    [Test]
+    public async Task ItemDropWithoutContactSaysToAskInGameAsync()
+    {
+        var formatter = CreateFormatter("es", _ => ValueTask.FromResult<ulong?>(null));
+        var drop = new MonsterItemDroppedEvent(1, DateTime.UtcNow, "Hero", "Kundun", "Kalima 7", "Sword of Destruction", 0, false, true)
+        {
+            KillerAccountId = Guid.NewGuid(),
+            AncientSetName = "Hyon",
+            Options = [new DroppedItemOption(ItemOptionTypes.AncientBonus.Id, Stats.TotalStrength.Id, "Total Strength", 5, false)],
+        };
+
+        var message = await formatter.FormatAsync(drop).ConfigureAwait(false);
+
+        Assert.That(message?.Embed.Description, Does.EndWith("\n\n• Fuerza +5\n• Set ancient: Hyon\n\n¿Te interesa? Pregúntale en el juego a **Hero**."));
     }
 
     /// <summary>
@@ -111,11 +159,12 @@ public class DiscordMessageFormatterTest
         new CastleSiegeStateChangedEvent(1, DateTime.UtcNow, "Idle1", "Idle2", DateTime.UtcNow, null),
     };
 
-    private static DiscordMessageFormatter CreateFormatter(string language)
+    private static DiscordMessageFormatter CreateFormatter(string language, Func<Guid, ValueTask<ulong?>>? getContactUser = null)
     {
         return new DiscordMessageFormatter(
             CultureInfo.GetCultureInfo(language),
             serverId => $"Server {serverId}",
-            guildId => ValueTask.FromResult<string?>(guildId == OwnerGuildId ? "Winners" : null));
+            guildId => ValueTask.FromResult<string?>(guildId == OwnerGuildId ? "Winners" : null),
+            getContactUser);
     }
 }

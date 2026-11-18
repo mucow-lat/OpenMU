@@ -29,4 +29,10 @@ public enum AccountNotificationTypes
     /// A friend of a character of the account entered the game.
     /// </summary>
     FriendOnline = 4,
+
+    /// <summary>
+    /// Not a notification, but the permission to show the linked user in public notifications about the player, e.g. of rare item drops,
+    /// so that other players can contact them.
+    /// </summary>
+    PublicContact = 8,
 }

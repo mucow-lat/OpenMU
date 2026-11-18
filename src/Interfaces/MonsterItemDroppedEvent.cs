@@ -21,4 +21,25 @@ namespace MUnique.OpenMU.Interfaces;
 /// <param name="IsExcellent">A value indicating whether the item is excellent.</param>
 /// <param name="IsAncient">A value indicating whether the item is ancient.</param>
 public sealed record MonsterItemDroppedEvent(byte ServerId, DateTime TimestampUtc, string KillerName, string MonsterName, string MapName, string ItemName, byte ItemLevel, bool IsExcellent, bool IsAncient)
-    : GameEvent(ServerId, TimestampUtc);
+    : GameEvent(ServerId, TimestampUtc)
+{
+    /// <summary>
+    /// Gets the identifier of the account of the player who killed the monster, if it's known.
+    /// </summary>
+    public Guid? KillerAccountId { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the item has its skill.
+    /// </summary>
+    public bool HasSkill { get; init; }
+
+    /// <summary>
+    /// Gets the name of the item's ancient set, in the neutral language, if it's ancient.
+    /// </summary>
+    public string? AncientSetName { get; init; }
+
+    /// <summary>
+    /// Gets the options of the item, in the order of the item.
+    /// </summary>
+    public IReadOnlyList<DroppedItemOption> Options { get; init; } = [];
+}

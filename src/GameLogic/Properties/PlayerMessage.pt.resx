@@ -1121,7 +1121,7 @@ Extensões de inventário: {18}</value>
     <value>O chat da sua aliança é espelhado no Discord. Membros que vincularam o usuário do Discord podem ler e escrever lá.</value>
   </data>
   <data name="DiscordNotifications" xml:space="preserve">
-    <value>Mensagens diretas no Discord sobre: {0}. Ative ou desative com /discord notify login, letter ou friend.</value>
+    <value>Mensagens diretas no Discord sobre: {0}. Ative ou desative com /discord notify login, letter ou friend; /discord notify contact mostra seu Discord nas notícias dos seus drops raros.</value>
   </data>
   <data name="MapIsNotActive" xml:space="preserve">
     <value>Este mapa não está disponível.</value>

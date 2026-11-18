@@ -1010,7 +1010,7 @@ Inventarerweiterungen: {18}</value>
     <value>Der Chat deiner Allianz wird nach Discord gespiegelt. Mitglieder, die ihren Discord-Benutzer verknüpft haben, können ihn dort lesen und schreiben.</value>
   </data>
   <data name="DiscordNotifications" xml:space="preserve">
-    <value>Direktnachrichten in Discord über: {0}. Mit /discord notify login, letter oder friend schaltest du sie ein oder aus.</value>
+    <value>Direktnachrichten in Discord über: {0}. Mit /discord notify login, letter oder friend schaltest du sie ein oder aus; /discord notify contact zeigt deinen Discord in den Nachrichten über deine seltenen Drops.</value>
   </data>
   <data name="MapIsNotActive" xml:space="preserve">
     <value>Diese Karte ist nicht verfügbar.</value>

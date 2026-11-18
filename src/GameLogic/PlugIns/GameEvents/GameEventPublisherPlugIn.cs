@@ -6,12 +6,15 @@ namespace MUnique.OpenMU.GameLogic.PlugIns.GameEvents;
 
 using System.Reflection;
 using System.Runtime.InteropServices;
+using MUnique.OpenMU.AttributeSystem;
+using MUnique.OpenMU.DataModel.Configuration.Items;
 using MUnique.OpenMU.GameLogic.Attributes;
 using MUnique.OpenMU.GameLogic.CastleSiege;
 using MUnique.OpenMU.GameLogic.MiniGames;
 using MUnique.OpenMU.GameLogic.NPC;
 using MUnique.OpenMU.GameLogic.Views;
 using MUnique.OpenMU.Interfaces;
+using MUnique.OpenMU.Persistence;
 using MUnique.OpenMU.PlugIns;
 
 /// <summary>
@@ -180,7 +183,13 @@ public class GameEventPublisherPlugIn
             item.Definition?.Name.ValueInNeutralLanguage ?? string.Empty,
             item.Level,
             isExcellent,
-            isAncient));
+            isAncient)
+        {
+            KillerAccountId = killer.Account?.GetId(),
+            HasSkill = item.HasSkill,
+            AncientSetName = item.ItemSetGroups.FirstOrDefault(set => set.AncientSetDiscriminator > 0)?.ItemSetGroup?.Name.ValueInNeutralLanguage,
+            Options = GetOptions(item),
+        });
     }
 
     /// <inheritdoc />
@@ -311,5 +320,32 @@ public class GameEventPublisherPlugIn
     private static List<string> GetMapNames(IEnumerable<GameMapDefinition> maps)
     {
         return maps.Select(map => map.Name.ValueInNeutralLanguage).ToList();
+    }
+
+    /// <summary>
+    /// Gets the options of an item with their values at their levels, the same way as the power ups of the item are created.
+    /// </summary>
+    private static List<DroppedItemOption> GetOptions(Item item)
+    {
+        var options = new List<DroppedItemOption>();
+        foreach (var link in item.ItemOptions.OrderBy(link => link.Index))
+        {
+            if (link.ItemOption is not { OptionType: { } type } option)
+            {
+                continue;
+            }
+
+            var level = option.LevelType == LevelType.ItemLevel ? item.Level : link.Level;
+            var powerUp = option.LevelDependentOptions?.FirstOrDefault(l => l.Level == level)?.PowerUpDefinition ?? option.PowerUpDefinition;
+            var value = powerUp?.Boost?.ConstantValue;
+            options.Add(new DroppedItemOption(
+                type.Id,
+                powerUp?.TargetAttribute?.Id,
+                powerUp?.TargetAttribute?.Designation ?? string.Empty,
+                value?.Value ?? 0,
+                value?.AggregateType == AggregateType.Multiplicate));
+        }
+
+        return options;
     }
 }

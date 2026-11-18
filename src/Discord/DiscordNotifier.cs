@@ -38,6 +38,7 @@ public sealed class DiscordNotifier : IGameEventListener, IAsyncDisposable
     /// <param name="getGuildName">The function which gets the name of a guild by its persistent identifier.</param>
     /// <param name="loggerFactory">The logger factory.</param>
     /// <param name="timeProvider">The time provider.</param>
+    /// <param name="getContactUser">The function which gets the Discord user of an account, if its player wants to be contacted about their rare drops.</param>
     public DiscordNotifier(
         DiscordSettings settings,
         HttpClient httpClient,
@@ -45,11 +46,12 @@ public sealed class DiscordNotifier : IGameEventListener, IAsyncDisposable
         Func<byte, string?> getServerName,
         Func<Guid, ValueTask<string?>> getGuildName,
         ILoggerFactory loggerFactory,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        Func<Guid, ValueTask<ulong?>>? getContactUser = null)
     {
         this._settings = settings;
         this._logger = loggerFactory.CreateLogger<DiscordNotifier>();
-        this._formatter = new DiscordMessageFormatter(settings.GetCulture(), getServerName, getGuildName);
+        this._formatter = new DiscordMessageFormatter(settings.GetCulture(), getServerName, getGuildName, getContactUser);
 
         this._botMessenger = botMessenger;
         this._botSenderLogger = loggerFactory.CreateLogger<DiscordBotChannelSender>();

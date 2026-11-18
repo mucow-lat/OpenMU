@@ -518,4 +518,94 @@
   <data name="Bind_AlreadyBound" xml:space="preserve">
     <value>El chat de {0} ya está vinculado a {1}. Primero usa /guildchat unbind en ese canal.</value>
   </data>
+  <data name="ItemDropped_Skill" xml:space="preserve">
+    <value>Skill</value>
+  </data>
+  <data name="ItemDropped_AncientSet" xml:space="preserve">
+    <value>Set ancient: {0}</value>
+  </data>
+  <data name="ItemDropped_Contact" xml:space="preserve">
+    <value>Contacto: {0}</value>
+  </data>
+  <data name="ItemDropped_AskInGame" xml:space="preserve">
+    <value>¿Te interesa? Pregúntale en el juego a **{0}**.</value>
+  </data>
+  <data name="Notify_Type_Contact" xml:space="preserve">
+    <value>Mi Discord en los drops raros</value>
+  </data>
+  <data name="ItemOption_Luck" xml:space="preserve">
+    <value>Suerte (tasa de daño crítico +5%)</value>
+  </data>
+  <data name="ItemOption_Excellent_ManaAfterMonsterKillMultiplier" xml:space="preserve">
+    <value>Maná al matar un monstruo +maná/8</value>
+  </data>
+  <data name="ItemOption_Excellent_HealthAfterMonsterKillMultiplier" xml:space="preserve">
+    <value>Vida al matar un monstruo +vida/8</value>
+  </data>
+  <data name="ItemOption_Excellent_AttackSpeedAny" xml:space="preserve">
+    <value>Velocidad de ataque +{0}</value>
+  </data>
+  <data name="ItemOption_Excellent_PhysicalBaseDmgIncrease" xml:space="preserve">
+    <value>Daño +{0}%</value>
+  </data>
+  <data name="ItemOption_Excellent_WizardryBaseDmgIncrease" xml:space="preserve">
+    <value>Daño mágico +{0}%</value>
+  </data>
+  <data name="ItemOption_Excellent_PhysicalBaseDmg" xml:space="preserve">
+    <value>Daño +nivel/20</value>
+  </data>
+  <data name="ItemOption_Excellent_WizardryBaseDmg" xml:space="preserve">
+    <value>Daño mágico +nivel/20</value>
+  </data>
+  <data name="ItemOption_Excellent_ExcellentDamageChance" xml:space="preserve">
+    <value>Tasa de daño excelente +{0}%</value>
+  </data>
+  <data name="ItemOption_Excellent_MoneyAmountRate" xml:space="preserve">
+    <value>Zen obtenido de monstruos +{0}%</value>
+  </data>
+  <data name="ItemOption_Excellent_DefenseRatePvm" xml:space="preserve">
+    <value>Tasa de defensa +{0}%</value>
+  </data>
+  <data name="ItemOption_Excellent_DamageReflection" xml:space="preserve">
+    <value>Refleja daño +{0}%</value>
+  </data>
+  <data name="ItemOption_Excellent_ArmorDamageDecrease" xml:space="preserve">
+    <value>Reduce el daño +{0}%</value>
+  </data>
+  <data name="ItemOption_Excellent_MaximumMana" xml:space="preserve">
+    <value>Maná máximo +{0}%</value>
+  </data>
+  <data name="ItemOption_Excellent_MaximumHealth" xml:space="preserve">
+    <value>Vida máxima +{0}%</value>
+  </data>
+  <data name="ItemOption_Option_PhysicalBaseDmg" xml:space="preserve">
+    <value>Daño adicional +{0}</value>
+  </data>
+  <data name="ItemOption_Option_WizardryBaseDmg" xml:space="preserve">
+    <value>Daño mágico adicional +{0}</value>
+  </data>
+  <data name="ItemOption_Option_DefenseBase" xml:space="preserve">
+    <value>Defensa adicional +{0}</value>
+  </data>
+  <data name="ItemOption_Option_DefenseRatePvm" xml:space="preserve">
+    <value>Tasa de defensa adicional +{0}</value>
+  </data>
+  <data name="ItemOption_Option_HealthRecoveryMultiplier" xml:space="preserve">
+    <value>Recuperación automática de vida {0}%</value>
+  </data>
+  <data name="ItemOption_AncientBonus_TotalStrength" xml:space="preserve">
+    <value>Fuerza +{0}</value>
+  </data>
+  <data name="ItemOption_AncientBonus_TotalAgility" xml:space="preserve">
+    <value>Agilidad +{0}</value>
+  </data>
+  <data name="ItemOption_AncientBonus_TotalVitality" xml:space="preserve">
+    <value>Vitalidad +{0}</value>
+  </data>
+  <data name="ItemOption_AncientBonus_TotalEnergy" xml:space="preserve">
+    <value>Energía +{0}</value>
+  </data>
+  <data name="ItemOption_AncientBonus_TotalLeadership" xml:space="preserve">
+    <value>Comando +{0}</value>
+  </data>
 </root>
