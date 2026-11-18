@@ -38,6 +38,13 @@ public class DefaultDropGenerator : IDropGenerator
     private readonly IList<ItemDefinition>?[] _droppableSocketItemsPerMonsterLevel = new IList<ItemDefinition>?[byte.MaxValue + 1];
 
     private readonly byte _maxItemOptionLevelDrop;
+
+    /// <summary>
+    /// Gets or sets the multiplier of the chance-based drop groups of a monster kill, for a server-wide
+    /// drop event (1 = as configured). Each group keeps its share of the drops; past a total chance
+    /// of 1, every kill drops. Guaranteed groups and the selection out of a box aren't affected.
+    /// </summary>
+    public static double ChanceMultiplier { get; set; } = 1.0;
     private readonly byte _excellentItemDropLevelDelta;
 
     /// <summary>
@@ -311,9 +318,10 @@ public class DefaultDropGenerator : IDropGenerator
                 totalChance += group.Chance;
             }
 
+            var multiplier = Math.Max(ChanceMultiplier, 0);
             for (int i = 0; i < remainingDrops; i++)
             {
-                var group = this.SelectRandomGroup(this._chanceDropGroups, totalChance);
+                var group = this.SelectRandomGroup(this._chanceDropGroups, totalChance, multiplier);
                 if (group is null)
                 {
                     continue;
@@ -564,12 +572,22 @@ public class DefaultDropGenerator : IDropGenerator
         };
     }
 
-    private DropItemGroup? SelectRandomGroup(IEnumerable<DropItemGroup> groups, double totalChance)
+    private DropItemGroup? SelectRandomGroup(IEnumerable<DropItemGroup> groups, double totalChance, double multiplier = 1.0)
     {
+        // With a multiplier, the roll shrinks instead of every chance growing; past a multiplied total
+        // of 1 it spans the total, as without one: each group keeps its share.
         var remainingThreshold = this._randomizer.NextDouble();
-        if (totalChance > 1.0)
+        if (totalChance * multiplier > 1.0)
         {
             remainingThreshold *= totalChance;
+        }
+        else if (multiplier > 0 && multiplier != 1.0)
+        {
+            remainingThreshold /= multiplier;
+        }
+        else if (multiplier <= 0)
+        {
+            return null;
         }
 
         foreach (var group in groups)
