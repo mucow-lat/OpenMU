@@ -174,6 +174,26 @@ public sealed class Monster : AttackableNpcBase, IAttackable, IAttacker, ISuppor
             calculatedPath.RemoveAt(calculatedPath.Count - 1);
         }
 
+        // A penned monster in its pen stops where the path would leave it (one out of it may walk back).
+        if (MonsterLeash.GetPen(this.SpawnArea, this.CurrentMap.Terrain) is { } pen && pen.Contains(this.Position))
+        {
+            var inside = 0;
+            while (inside < calculatedPath.Count && pen.Contains(calculatedPath[inside].Point))
+            {
+                inside++;
+            }
+
+            while (calculatedPath.Count > inside)
+            {
+                calculatedPath.RemoveAt(calculatedPath.Count - 1);
+            }
+
+            if (calculatedPath.Count == 0)
+            {
+                return false;
+            }
+        }
+
         var targetNode = calculatedPath.Last(); // that's one step before the target coordinates actually are reached.
         using var stepsRent = MemoryPool<WalkingStep>.Shared.Rent(calculatedPath.Count);
         var steps = stepsRent.Memory.Slice(0, calculatedPath.Count);
@@ -278,6 +298,12 @@ public sealed class Monster : AttackableNpcBase, IAttackable, IAttacker, ISuppor
         byte randy = (byte)Math.Min(0xFF, Math.Max(0, newY));
 
         var target = new Point(randx, randy);
+
+        // A penned monster wanders inside its pen, and back to it when something pushed it out.
+        if (MonsterLeash.GetPen(this.SpawnArea, this.CurrentMap.Terrain) is { } pen && !pen.Contains(target))
+        {
+            target = pen.Contains(this.Position) ? pen.RandomTile() : pen.Center;
+        }
         if (this._intelligence.CanWalkOn(target))
         {
             await this.WalkToAsync(target).ConfigureAwait(false);
