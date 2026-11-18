@@ -67,7 +67,10 @@ public static class AttackableExtensions
     /// </returns>
     public static async ValueTask<HitInfo> CalculateDamageAsync(this IAttacker attacker, IAttackable defender, SkillEntry? skill, bool isCombo, double damageFactor = 1.0)
     {
-        if (!attacker.IsAttackSuccessfulTo(defender))
+        var floors = attacker is NPC.Monster && defender is Player && PvmHitFloors.For is { } floorsOf
+            ? floorsOf(attacker, defender)
+            : default;
+        if (!Rand.NextRandomBool(Math.Max(attacker.GetHitChanceTo(defender), floors.HitFloor)))
         {
             return new HitInfo(0, 0, DamageAttributes.Undefined, 0, 0, skill);
         }
@@ -134,7 +137,15 @@ public static class AttackableExtensions
                 dmg += dmg;
             }
 
+            var rawDamage = dmg;
             dmg = (int)((dmg * duelDmgDec) - defense);
+            if (floors.DamageFloor > 0 || floors.HealthFloor > 0)
+            {
+                // Monsters hit physically; the reductions after the defense still apply to the floors.
+                dmg = Math.Max(dmg, (int)(rawDamage * floors.DamageFloor));
+                dmg = Math.Max(dmg, (int)(defender.Attributes[Stats.MaximumHealth] * floors.HealthFloor));
+            }
+
             dmg += GetMasterSkillTreePhysicalPassiveDamageBonus(attacker, true);
 
             if (attacker.Attributes[Stats.IsTwoHandedWeaponEquipped] > 0)
@@ -202,7 +213,9 @@ public static class AttackableExtensions
 
         /*Scroll of Battle (crit dmg)/Strengthener (exc dmg) go here (but for now they don't exist)*/
 
-        if (!isPvp && defender.Overrates(attacker))
+        // With a hit floor, the monster's hits which land do their damage: the defense rate already
+        // took its share of them.
+        if (!isPvp && floors.HitFloor <= 0 && defender.Overrates(attacker))
         {
             dmg = (int)(dmg * 0.3);
         }
@@ -266,7 +279,7 @@ public static class AttackableExtensions
         {
             manaToll = soulBarrierManaToll;
             float soulBarrierReduction = defender.Attributes[Stats.SoulBarrierReceiveDecrement];
-            soulBarrierReduction = Math.Clamp(soulBarrierReduction, 0f, 0.9f);
+            soulBarrierReduction = Math.Clamp(soulBarrierReduction, 0f, floors.SoulBarrierCap > 0 ? Math.Min(0.9f, floors.SoulBarrierCap) : 0.9f);
             dmg -= (int)(dmg * soulBarrierReduction);
         }
 
@@ -727,12 +740,6 @@ public static class AttackableExtensions
     public static float GetDefenseRatePvm(this IAttackable defender)
     {
         return defender.Attributes[Stats.DefenseRatePvm] + defender.Attributes[Stats.IncreaseBlockBonus];
-    }
-
-    private static bool IsAttackSuccessfulTo(this IAttacker attacker, IAttackable defender)
-    {
-        var hitChance = attacker.GetHitChanceTo(defender);
-        return Rand.NextRandomBool(hitChance);
     }
 
     private static float GetHitChanceTo(this IAttacker attacker, IAttackable defender)
