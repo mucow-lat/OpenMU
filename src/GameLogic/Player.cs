@@ -150,7 +150,7 @@ public class Player : AsyncDisposable, IBucketMapObserver, IAttackable, IAttacke
             await (this.GameContext.PlugInManager.GetPlugInPoint<IPlayerStateChangedPlugIn>()?.PlayerStateChangedAsync(this, args.PreviousState, args.CurrentStateState) ?? ValueTask.CompletedTask).ConfigureAwait(false);
         };
         this.PlayerState.StateChanges += async args => await (this.GameContext.PlugInManager.GetPlugInPoint<IPlayerStateChangingPlugIn>()?.PlayerStateChangingAsync(this, args) ?? ValueTask.CompletedTask).ConfigureAwait(false);
-        this._observerToWorldViewAdapter = new ObserverToWorldViewAdapter(this, this.InfoRange);
+        this._observerToWorldViewAdapter = new ObserverToWorldViewAdapter(this, this.GameContext.Configuration.InfoRange);
         this._muHelperLazy = new Lazy<MuHelper.MuHelper>(() => new MuHelper.MuHelper(this));
         this.Culture = CultureInfo.CurrentCulture;
     }
@@ -558,7 +558,27 @@ public class Player : AsyncDisposable, IBucketMapObserver, IAttackable, IAttacke
     public IList<Bucket<ILocateable>> ObservingBuckets => this._observerToWorldViewAdapter.ObservingBuckets;
 
     /// <inheritdoc/>
-    public int InfoRange => this.GameContext.Configuration.InfoRange;
+    /// <remarks>The configuration's, unless the client asked for another (<see cref="SetInfoRangeAsync"/>).</remarks>
+    public int InfoRange => this._observerToWorldViewAdapter.InfoRange;
+
+    /// <summary>
+    /// Changes how far this player sees, e.g. for a client whose camera was zoomed out, and updates
+    /// what is in scope right away: farther objects come into view, or go out of it.
+    /// </summary>
+    /// <param name="range">The new range, in tiles; the caller limits it.</param>
+    public async ValueTask SetInfoRangeAsync(int range)
+    {
+        if (range == this._observerToWorldViewAdapter.InfoRange)
+        {
+            return;
+        }
+
+        this._observerToWorldViewAdapter.InfoRange = range;
+        if (this.CurrentMap is { } map)
+        {
+            await map.RefreshObserverAsync(this).ConfigureAwait(false);
+        }
+    }
 
     /// <inheritdoc/>
     IAttributeSystem IAttackable.Attributes => this.Attributes!;

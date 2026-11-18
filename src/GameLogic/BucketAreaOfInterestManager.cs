@@ -118,6 +118,12 @@ internal class BucketAreaOfInterestManager : IAreaOfInterestManager
         return this.Map.GetInRange(point, range);
     }
 
+    /// <inheritdoc/>
+    public ValueTask RefreshObserverAsync(IBucketMapObserver observer, Point position)
+    {
+        return this.UpdateObservingBucketsAsync(position, observer);
+    }
+
     /// <summary>
     /// Updates the observing buckets, and notifies the <paramref name="player"/> about new objects which are in scope, and old objects which are out of scope.
     /// </summary>

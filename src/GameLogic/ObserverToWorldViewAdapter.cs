@@ -30,7 +30,8 @@ public sealed class ObserverToWorldViewAdapter : AsyncDisposable, IBucketMapObse
     }
 
     /// <inheritdoc/>
-    public int InfoRange { get; }
+    /// <remarks>Settable: a client may ask to see farther (<see cref="Player.SetInfoRangeAsync"/>).</remarks>
+    public int InfoRange { get; set; }
 
     /// <inheritdoc/>
     public IList<Bucket<ILocateable>> ObservingBuckets { get; } = new List<Bucket<ILocateable>>();

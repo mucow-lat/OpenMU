@@ -45,4 +45,12 @@ public interface IAreaOfInterestManager
     /// <param name="range">The range.</param>
     /// <returns>The objects in range.</returns>
     IEnumerable<ILocateable> GetInRange(Point point, int range);
+
+    /// <summary>
+    /// Observes again the buckets around <paramref name="position"/> after the observer's
+    /// <see cref="IBucketMapObserver.InfoRange"/> changed.
+    /// </summary>
+    /// <param name="observer">The observer.</param>
+    /// <param name="position">Where it is.</param>
+    ValueTask RefreshObserverAsync(IBucketMapObserver observer, Point position);
 }

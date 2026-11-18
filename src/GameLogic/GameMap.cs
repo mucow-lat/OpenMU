@@ -247,6 +247,15 @@ public class GameMap
     }
 
     /// <summary>
+    /// Updates what <paramref name="player"/> observes after its info range changed.
+    /// </summary>
+    /// <param name="player">The player.</param>
+    public ValueTask RefreshObserverAsync(Player player)
+    {
+        return this._areaOfInterestManager.RefreshObserverAsync(player, player.Position);
+    }
+
+    /// <summary>
     /// Moves the locatable on the map.
     /// </summary>
     /// <param name="locatable">The monster.</param>
