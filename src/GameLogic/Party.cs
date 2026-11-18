@@ -55,6 +55,13 @@ public sealed class Party : AsyncDisposable
     }
 
     /// <summary>
+    /// Gets or sets the number of members up to which the experience bonus grows (5% each after the
+    /// first); a bigger party shares with more players, but with this size's bonus. Unlimited by
+    /// default; a server sets it at its start, before any party exists.
+    /// </summary>
+    public static int MaximumBonusMemberCount { get; set; } = int.MaxValue;
+
+    /// <summary>
     /// Gets the party members.
     /// </summary>
     public IReadOnlyList<IPartyMember> PartyList => this._partyMembers;
@@ -343,7 +350,7 @@ public sealed class Party : AsyncDisposable
         var averageLevel = totalLevel / memberCount;
         var baseExperience = killed.CalculateBaseExperience(averageLevel);
 
-        var partyBonusMultiplier = Math.Pow(1.05, memberCount - 1);
+        var partyBonusMultiplier = Math.Pow(1.05, Math.Min(memberCount, MaximumBonusMemberCount) - 1);
         var mapExperienceMultiplier = killed.CurrentMap?.Definition.ExpMultiplier ?? 1;
         var totalBaseExperience = baseExperience * memberCount * partyBonusMultiplier * mapExperienceMultiplier;
 
