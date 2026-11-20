@@ -27,4 +27,10 @@ public static class MuWebDiscordBridge
     /// Gets or sets the reading of a Discord user's avatar hash (null when they have none).
     /// </summary>
     public static Func<ulong, Task<string?>>? FetchAvatar { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reading of the name a Discord user shows: their nickname on the bot's server,
+    /// else their display name, else their user name (null when the user can't be read).
+    /// </summary>
+    public static Func<ulong, Task<string?>>? FetchDisplayName { get; set; }
 }

@@ -51,5 +51,22 @@ public sealed partial class DiscordBot
             var user = await current.Rest.GetUserAsync(userId).ConfigureAwait(false);
             return user?.AvatarId;
         };
+        MuWebDiscordBridge.FetchDisplayName = async userId =>
+        {
+            if (this._client is not { } current)
+            {
+                return null;
+            }
+
+            // The name on the bot's server first (a nickname there), as members see it.
+            if (this.GetRoleGuildId() is { } guildId
+                && await current.Rest.GetGuildUserAsync(guildId, userId).ConfigureAwait(false) is { } member)
+            {
+                return member.DisplayName;
+            }
+
+            var user = await current.Rest.GetUserAsync(userId).ConfigureAwait(false);
+            return user is null ? null : user.GlobalName ?? user.Username;
+        };
     }
 }
