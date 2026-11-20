@@ -70,14 +70,36 @@ public static class AttackableExtensions
         var floors = attacker is NPC.Monster && defender is Player && PvmHitFloors.For is { } floorsOf
             ? floorsOf(attacker, defender)
             : default;
+
+        Player? attackerPlayer = attacker is AttackerSurrogate surrogate ? surrogate.Owner : (attacker is Player player ? player : null);
+        bool isPvp = attackerPlayer is not null && defender is Player;
+
+        // The server's modifiers of the hits between players (PvpModifiers): a player's own hit, their
+        // pet's, or their summoned monster's.
+        var pvp = default(PvpHit);
+        if (defender is Player defenderPlayer && PvpModifiers.For is { } pvpOf)
+        {
+            if (attackerPlayer is not null)
+            {
+                pvp = pvpOf(attackerPlayer, defenderPlayer, skill, attacker is AttackerSurrogate ? PvpHitSource.Pet : PvpHitSource.Player);
+            }
+            else if (attacker is Monster { SummonedBy: { } summoner })
+            {
+                pvp = pvpOf(summoner, defenderPlayer, skill, PvpHitSource.Summon);
+            }
+        }
+
         var hitChance = Math.Max(attacker.GetHitChanceTo(defender), floors.HitFloor);
+        if (pvp.HitChanceMultiplier > 0)
+        {
+            hitChance = Math.Clamp(hitChance * pvp.HitChanceMultiplier, 0.03f, 1f);
+        }
+
         if (!Rand.NextRandomBool(hitChance))
         {
             return new HitInfo(0, 0, DamageAttributes.Undefined, 0, 0, skill);
         }
 
-        Player? attackerPlayer = attacker is AttackerSurrogate surrogate ? surrogate.Owner : (attacker is Player player ? player : null);
-        bool isPvp = attackerPlayer is not null && defender is Player;
         bool isClassicPvp = isPvp && defender.Attributes[Stats.MaximumShield] == 0;
         bool isClassicPvpDuel = isClassicPvp && attackerPlayer!.DuelRoom?.Opponent == defender;
         var duelDmgDec = isClassicPvpDuel ? 0.6 : 1;
@@ -347,7 +369,12 @@ public static class AttackableExtensions
             }
         }
 
-        return defender.GetHitInfo((uint)dmg, attributes, attacker, (uint)manaToll, skill, (uint)petDamage);
+        if (pvp.DamageMultiplier > 0 && dmg > 0)
+        {
+            dmg = Math.Max(1, (int)(dmg * pvp.DamageMultiplier));
+        }
+
+        return defender.GetHitInfo((uint)dmg, attributes, attacker, (uint)manaToll, skill, (uint)petDamage, pvp.ShieldShare);
     }
 
     /// <summary>
@@ -360,8 +387,9 @@ public static class AttackableExtensions
     /// <param name="manaToll">The mana reduction amount that is traded for damage (e.g. from Soul Barrier).</param>
     /// <param name="skill">The <paramref name="attacker"/>'s skill.</param>
     /// <param name="petDamage">The pet damage.</param>
+    /// <param name="shieldShare">The share of the damage the shield takes, when the server sets one (PvpModifiers); 0 for OpenMU's 0.9.</param>
     /// <returns>The calculated hit info.</returns>
-    public static HitInfo GetHitInfo(this IAttackable defender, uint damage, DamageAttributes attributes, IAttacker attacker, uint manaToll = 0, SkillEntry? skill = null, uint petDamage = 0)
+    public static HitInfo GetHitInfo(this IAttackable defender, uint damage, DamageAttributes attributes, IAttacker attacker, uint manaToll = 0, SkillEntry? skill = null, uint petDamage = 0, float shieldShare = 0)
     {
         var shieldBypass = Rand.NextRandomBool(attacker.Attributes[Stats.ShieldBypassChance]);
         if (shieldBypass || defender.Attributes[Stats.CurrentShield] < 1)
@@ -376,7 +404,7 @@ public static class AttackableExtensions
             return new HitInfo(damage, (uint)shieldDamage, attributes, manaToll, petDamage, skill);
         }
 
-        var shieldRatio = 0.90;
+        var shieldRatio = shieldShare > 0 ? Math.Min(1, shieldShare) : 0.90;
         shieldRatio -= attacker.Attributes[Stats.ShieldDecreaseRateIncrease];
         shieldRatio += defender.Attributes[Stats.ShieldRateIncrease];
         shieldRatio = Math.Max(0, shieldRatio);
@@ -432,6 +460,11 @@ public static class AttackableExtensions
             {
                 var regenerationValue = player.Attributes.CreateElement(powerUpDefinition);
                 var value = regenerationValue.Value + (skillEntry.Level == 0 ? 0 : regenerationValue.Value * skillEntry.CalculateValue() / 100);
+                if (target is Player other && !ReferenceEquals(other, player) && PvpModifiers.HealScale is { } healScale && healScale(player, other, skillEntry) is > 0 and var heal)
+                {
+                    value *= heal;
+                }
+
                 target.Attributes[regeneration.CurrentAttribute] = Math.Min(
                     target.Attributes[regeneration.CurrentAttribute] + value,
                     target.Attributes[regeneration.MaximumAttribute]);

@@ -43,6 +43,28 @@ public static class MagicEffectPowerUpExtensions
         var chanceElementPvp = skill.MagicEffectDef.ChancePvp is { } chancePvp ? player.Attributes!.CreateChanceElement(chancePvp) : chanceElement;
         AddSkillPowersToResult(skill.MagicEffectDef.PowerUpDefinitions, ref result);
         AddSkillPowersToResult(skill.MagicEffectDef.PowerUpDefinitionsPvp, ref resultPvp);
+
+        // The server's modifiers (PvpModifiers): the power of a buff, and the duration and chance of an
+        // effect on players.
+        if (PvpModifiers.BuffScale is { } buffScale && buffScale(player, skill) is > 0 and var buff && Math.Abs(buff - 1) > 0.0001f)
+        {
+            Scale(result, buff);
+            Scale(resultPvp, buff);
+        }
+
+        if (PvpModifiers.EffectOnPlayers is { } effectOf && effectOf(player, skill) is var effect)
+        {
+            if (effect.DurationScale > 0 && Math.Abs(effect.DurationScale - 1) > 0.0001f)
+            {
+                durationElementPvp = new ScaledElement(durationElementPvp, effect.DurationScale);
+            }
+
+            if (effect.ChanceScale > 0 && Math.Abs(effect.ChanceScale - 1) > 0.0001f)
+            {
+                chanceElementPvp = new ScaledElement(chanceElementPvp, effect.ChanceScale);
+            }
+        }
+
         skillEntry.PowerUpDuration = durationElement;
         skillEntry.PowerUpDurationPvp = durationElementPvp;
         skillEntry.PowerUpChance = chanceElement;
@@ -56,6 +78,17 @@ public static class MagicEffectPowerUpExtensions
         {
             skillEntry.PowerUpChance = new CombinedElement(skillEntry.PowerUpChance, new ConstantElement(bonusChance));
             skillEntry.PowerUpChancePvp = new CombinedElement(skillEntry.PowerUpChancePvp, new ConstantElement(bonusChance));
+        }
+
+        static void Scale((AttributeDefinition Target, IElement BuffPowerUp)[] powerUps, float scale)
+        {
+            for (var i = 0; i < powerUps.Length; i++)
+            {
+                if (powerUps[i].BuffPowerUp is { } element)
+                {
+                    powerUps[i] = (powerUps[i].Target, new ScaledElement(element, scale));
+                }
+            }
         }
 
         void AddSkillPowersToResult(ICollection<PowerUpDefinition> powerUps, ref (AttributeDefinition Target, IElement BuffPowerUp)[] result)
