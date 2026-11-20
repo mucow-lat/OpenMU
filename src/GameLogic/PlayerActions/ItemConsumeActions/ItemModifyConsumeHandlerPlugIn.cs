@@ -41,10 +41,20 @@ public abstract class ItemModifyConsumeHandlerPlugIn : BaseConsumeHandlerPlugIn
             return false;
         }
 
+        // MuCow: jewel results (Soul, Bless, Life, Harmony, refining stones) were not logged, so a
+        // player's claim like "the Soul took my Life option" could not be checked afterwards.
+        var before = targetItem.ToString();
         if (!this.ModifyItem(targetItem, player.PersistenceContext))
         {
             return false;
         }
+
+        player.Logger.LogInformation(
+            "[Joya] {Player} used {Jewel} on {Before} -> {After}",
+            player,
+            item.Definition?.Name.ValueInNeutralLanguage ?? item.ToString(),
+            before,
+            targetItem.ToString());
 
         await this.ConsumeSourceItemAsync(player, item).ConfigureAwait(false);
 

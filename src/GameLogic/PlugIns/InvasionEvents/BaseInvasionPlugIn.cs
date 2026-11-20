@@ -57,6 +57,11 @@ public abstract class BaseInvasionPlugIn<TConfiguration> : PeriodicTaskBasePlugI
     }
 
     /// <summary>
+    /// How far round its leader a monster of a corps (a mob without maps of its own) appears.
+    /// </summary>
+    protected const byte FollowerRadius = 8;
+
+    /// <summary>
     /// Spawns <paramref name="quantity"/> instances of <paramref name="monsterDefinition"/> on
     /// <paramref name="gameMap"/>, each placed at a random walkable coordinate (or a fixed
     /// coordinate when <paramref name="x"/> and <paramref name="y"/> are provided).
@@ -69,19 +74,26 @@ public abstract class BaseInvasionPlugIn<TConfiguration> : PeriodicTaskBasePlugI
     /// <param name="announceDeath">If set, a death-broadcast handler is attached to each spawned monster.</param>
     /// <param name="x">The optional fixed X coordinate.</param>
     /// <param name="y">The optional fixed Y coordinate.</param>
-    protected async ValueTask CreateMonstersAsync(IGameContext gameContext, ILogger logger, GameMap gameMap, MonsterDefinition monsterDefinition, ushort quantity, bool announceDeath = false, byte? x = null, byte? y = null)
+    /// <param name="around">The optional point the monsters gather round (within <see cref="FollowerRadius"/>), when no fixed coordinate is given.</param>
+    /// <returns>Where the first monster was placed, if any.</returns>
+    protected async ValueTask<Point?> CreateMonstersAsync(IGameContext gameContext, ILogger logger, GameMap gameMap, MonsterDefinition monsterDefinition, ushort quantity, bool announceDeath = false, byte? x = null, byte? y = null, Point? around = null)
     {
+        Point? first = null;
         for (var i = 0; i < quantity; i++)
         {
             Point? spawnPoint = (x.HasValue && y.HasValue)
                 ? new Point(x.Value, y.Value)
-                : gameMap.Terrain.RandomWalkableCoordinate;
+                : around is { } center
+                    ? NearbySpawnPoint(gameMap.Terrain, center)
+                    : gameMap.Terrain.RandomWalkableCoordinate;
 
             if (spawnPoint is null)
             {
                 logger.LogDebug("Skipping one {Monster} on {Map}: no walkable cell found.", monsterDefinition.Designation, gameMap.Definition.Name);
                 continue;
             }
+
+            first ??= spawnPoint;
 
             var area = new MonsterSpawnArea
             {
@@ -117,6 +129,26 @@ public abstract class BaseInvasionPlugIn<TConfiguration> : PeriodicTaskBasePlugI
                 this.AttachDeathBroadcast(monster, state);
             }
         }
+
+        return first;
+    }
+
+    /// <summary>
+    /// Gets a walkable point outside the safezone within <see cref="FollowerRadius"/> of the center, or the center itself.
+    /// </summary>
+    private static Point NearbySpawnPoint(GameMapTerrain terrain, Point center)
+    {
+        for (var attempt = 0; attempt < 30; attempt++)
+        {
+            var px = Rand.NextInt(Math.Max(0, center.X - FollowerRadius), Math.Min(255, center.X + FollowerRadius + 1));
+            var py = Rand.NextInt(Math.Max(0, center.Y - FollowerRadius), Math.Min(255, center.Y + FollowerRadius + 1));
+            if (terrain.WalkMap[px, py] && !terrain.SafezoneMap[px, py])
+            {
+                return new Point((byte)px, (byte)py);
+            }
+        }
+
+        return center;
     }
 
     /// <summary>
@@ -125,13 +157,17 @@ public abstract class BaseInvasionPlugIn<TConfiguration> : PeriodicTaskBasePlugI
     /// <param name="gameContext">The game context.</param>
     /// <param name="mapId">The map id.</param>
     /// <param name="spawns">The spawn configurations.</param>
-    protected async ValueTask SpawnMobsAsync(IGameContext gameContext, ushort mapId, IEnumerable<InvasionSpawnConfiguration> spawns)
+    /// <param name="around">The optional point the monsters gather round.</param>
+    /// <returns>Where the first monster was placed, if any.</returns>
+    protected async ValueTask<Point?> SpawnMobsAsync(IGameContext gameContext, ushort mapId, IEnumerable<InvasionSpawnConfiguration> spawns, Point? around = null)
     {
         var gameMap = await gameContext.GetMapAsync(mapId).ConfigureAwait(false);
         if (gameMap is null)
         {
-            return;
+            return null;
         }
+
+        Point? first = null;
 
         var logger = gameContext.LoggerFactory.CreateLogger(this.GetType());
 
@@ -139,13 +175,16 @@ public abstract class BaseInvasionPlugIn<TConfiguration> : PeriodicTaskBasePlugI
         {
             if (gameContext.Configuration.Monsters.FirstOrDefault(m => m.Number == spawn.MonsterId) is { } monsterDefinition)
             {
-                await this.CreateMonstersAsync(gameContext, logger, gameMap, monsterDefinition, spawn.Count, spawn.AnnounceDeath, spawn.X, spawn.Y).ConfigureAwait(false);
+                var placed = await this.CreateMonstersAsync(gameContext, logger, gameMap, monsterDefinition, spawn.Count, spawn.AnnounceDeath, spawn.X, spawn.Y, around).ConfigureAwait(false);
+                first ??= placed;
             }
             else
             {
                 logger.LogDebug("Skipping monster {MobId}: definition not found.", spawn.MonsterId);
             }
         }
+
+        return first;
     }
 
     /// <inheritdoc />
@@ -287,9 +326,17 @@ public abstract class BaseInvasionPlugIn<TConfiguration> : PeriodicTaskBasePlugI
 
         var gameContext = state.Context;
 
-        foreach (var spawn in spawns)
+        // A mob without maps of its own (the White Wizard's ogres) is the leader's corps: it comes
+        // after the leader and gathers round it, as in the original, instead of all over the map.
+        var announced = this.AnnouncedMonsterId;
+        Point? leader = null;
+        foreach (var spawn in spawns.OrderBy(s => s.MapIds.Count == 0 ? 2 : s.MonsterId == announced ? 0 : 1))
         {
-            if (spawn.IsSpawnOnAllMaps)
+            if (spawn.MapIds.Count == 0 && state.SelectedMaps.TryGetValue(spawn.MonsterId, out var corpsMapId))
+            {
+                await this.SpawnMobsAsync(gameContext, corpsMapId, [spawn], leader).ConfigureAwait(false);
+            }
+            else if (spawn.IsSpawnOnAllMaps)
             {
                 foreach (var mapId in spawn.MapIds)
                 {
@@ -298,7 +345,8 @@ public abstract class BaseInvasionPlugIn<TConfiguration> : PeriodicTaskBasePlugI
             }
             else if (state.SelectedMaps.TryGetValue(spawn.MonsterId, out var selectedMapId))
             {
-                await this.SpawnMobsAsync(gameContext, selectedMapId, [spawn]).ConfigureAwait(false);
+                var placed = await this.SpawnMobsAsync(gameContext, selectedMapId, [spawn]).ConfigureAwait(false);
+                leader ??= placed;
             }
             else
             {
@@ -510,17 +558,22 @@ public abstract class BaseInvasionPlugIn<TConfiguration> : PeriodicTaskBasePlugI
     private IList<InvasionSpawnConfiguration> GetActiveMobs(IGameContext gameContext)
     {
         var gameConfiguration = gameContext.Configuration;
+        var forceSingleMap = this.Configuration?.ForceSingleMap is true;
         return (this.Configuration?.Mobs ?? [])
             .Where(mob => !gameConfiguration.Monsters.Any(m => m.Number == mob.MonsterId && !m.IsActive))
-            .Select(mob => new InvasionSpawnConfiguration(
-                mob.MonsterId,
-                mob.Count,
-                mob.MapIds.Where(mapId => gameConfiguration.Maps.Any(m => m.Number == mapId && m.IsActive)).ToList(),
-                mob.MapStrategy,
-                mob.X,
-                mob.Y,
-                mob.AnnounceDeath))
-            .Where(mob => mob.MapIds.Count > 0)
+            .Select(mob => (Mob: mob, ActiveMapIds: mob.MapIds.Where(mapId => gameConfiguration.Maps.Any(m => m.Number == mapId && m.IsActive)).ToList()))
+
+            // A mob without maps of its own goes to the single map of a ForceSingleMap invasion (the White
+            // Wizard's ogres): SelectSingleMap registers it there. Leaving it out spawned the wizard alone.
+            .Where(m => m.ActiveMapIds.Count > 0 || (forceSingleMap && m.Mob.MapIds.Count == 0))
+            .Select(m => new InvasionSpawnConfiguration(
+                m.Mob.MonsterId,
+                m.Mob.Count,
+                m.ActiveMapIds,
+                m.Mob.MapStrategy,
+                m.Mob.X,
+                m.Mob.Y,
+                m.Mob.AnnounceDeath))
             .ToList();
     }
 

@@ -174,8 +174,9 @@ public sealed class Monster : AttackableNpcBase, IAttackable, IAttacker, ISuppor
             calculatedPath.RemoveAt(calculatedPath.Count - 1);
         }
 
-        // A penned monster in its pen stops where the path would leave it (one out of it may walk back).
-        if (MonsterLeash.GetPen(this.SpawnArea, this.CurrentMap.Terrain) is { } pen && pen.Contains(this.Position))
+        // A penned monster in its reach (its pen and a few steps more, where it chases) stops where the path
+        // would leave it (one out of it may walk back).
+        if (MonsterLeash.GetReach(this.SpawnArea, this.CurrentMap.Terrain) is { } pen && pen.Contains(this.Position))
         {
             var inside = 0;
             while (inside < calculatedPath.Count && pen.Contains(calculatedPath[inside].Point))

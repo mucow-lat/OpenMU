@@ -107,6 +107,7 @@ public abstract class AttackableNpcBase : NonPlayerCharacter, IAttackable
     {
         if (this.Definition.ObjectKind == NpcObjectKind.Guard
             || this.IsAttackBlockedBySafezone(attacker)
+            || MonsterLeash.IsOutOfReach(this.SpawnArea, this.CurrentMap.Terrain, attacker.Position)
             || !this.CanBeAttackedBy(attacker))
         {
             return null;
@@ -430,12 +431,24 @@ public abstract class AttackableNpcBase : NonPlayerCharacter, IAttackable
 
     private async ValueTask HandleMoneyDropAsync(uint amount, Player killer, IReadOnlyList<ExperienceShare> experienceShares)
     {
+        // We don't drop money in Devil Square, etc.
+        var shouldDropMoney = killer.GameContext.Configuration.ShouldDropMoney && killer.CurrentMiniGame is null;
+        if (!shouldDropMoney && killer.GameContext.PlugInManager.GetPlugInPoint<IMonsterMoneyPaidPlugIn>() is { } plugInPoint)
+        {
+            // Paid money never reaches the IMonsterMoneyDroppedPlugIn, so it gets its own chance to change the amount.
+            var args = new MonsterMoneyPaidArgs(amount);
+            await plugInPoint.MonsterMoneyPayingAsync(this, killer, args).ConfigureAwait(false);
+            amount = args.Amount;
+            if (amount == 0)
+            {
+                return;
+            }
+        }
+
         // Each player gets the part of the money which matches the experience they gained from the kill,
         // so that money follows the same distribution as the experience it is derived from.
         var shares = MoneyDistribution.CreateShares(amount, experienceShares);
 
-        // We don't drop money in Devil Square, etc.
-        var shouldDropMoney = killer.GameContext.Configuration.ShouldDropMoney && killer.CurrentMiniGame is null;
         if (!shouldDropMoney)
         {
             if (killer.Party is { } party)

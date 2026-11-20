@@ -18,8 +18,9 @@ using MUnique.OpenMU.Pathfinding;
 /// </summary>
 /// <remarks>
 /// Used by Monster.RandomMoveAsync and Monster.WalkToAsync. A map can also pen the monsters of its point
-/// spawns (<see cref="PennedMaps"/>): each one walks, and chases, only on the tiles a few steps from its spawn point
-/// (<see cref="Pen"/>), so the monsters of a hunting ground made of cages stay in their cage.
+/// spawns (<see cref="PennedMaps"/>, a point or a small area): each one walks, and chases, only on the tiles a few steps from its spawn
+/// (<see cref="Pen"/>), so the monsters of a hunting ground made of cages stay in their cage. They chase a few
+/// steps further (<see cref="GetReach"/>), and can't be hurt from out of that reach.
 /// </remarks>
 public static class MonsterLeash
 {
@@ -29,10 +30,18 @@ public static class MonsterLeash
     /// <summary>How far one walk back may go: the walker takes 16 steps at most.</summary>
     private const int MaximumReturn = 12;
 
-    /// <summary>A spot's area is this wide at most (the spots are 5×5 or points).</summary>
-    private const int MaximumSpotSize = 5;
+    /// <summary>A spot's area is narrower than this (the spots are points, 3×3, 5×5 or, the wide ones since 2026-11-19, 9×9).</summary>
+    private const int MaximumSpotSize = 9;
+
+    /// <summary>
+    /// How many steps beyond its pen a penned monster chases: its reach. Who stands out of it can't hurt the
+    /// monster (<see cref="IsOutOfReach"/>), so nobody kills a penned monster from across a fence it can't pass.
+    /// </summary>
+    public const int ReachSteps = 4;
 
     private static readonly ConditionalWeakTable<MonsterSpawnArea, Pen> Pens = new();
+
+    private static readonly ConditionalWeakTable<MonsterSpawnArea, Pen> Reaches = new();
 
     /// <summary>
     /// Gets the maps whose monsters of a point spawn are penned, with how many steps
@@ -74,25 +83,70 @@ public static class MonsterLeash
 
     /// <summary>
     /// The pen of a monster's spawn, if it is a point and its map pens them: the walkable tiles out of the
-    /// safezone at most <see cref="PennedMaps"/> steps from the spawn point, walking around the walls.
+    /// safezone at most <see cref="PennedMaps"/> steps (plus half its width) from the spawn's middle, walking around the walls.
     /// </summary>
     /// <param name="area">The monster's spawn area.</param>
     /// <param name="terrain">The map's terrain.</param>
     /// <returns>The pen, or null.</returns>
     internal static Pen? GetPen(MonsterSpawnArea area, GameMapTerrain terrain)
     {
-        if (area.GameMap is not { } map
-            || !PennedMaps.TryGetValue(map.Number, out var steps)
-            || steps <= 0
-            || area.SpawnTrigger != SpawnTrigger.Automatic
-            || area.X1 != area.X2
-            || area.Y1 != area.Y2)
+        if (!TryGetPenSteps(area, out var steps))
         {
             return null;
         }
 
-        return Pens.GetValue(area, a => Pen.Create(new Point(a.X1, a.Y1), steps, terrain));
+        return Pens.GetValue(area, a => Pen.Create(Centre(a), steps, terrain));
     }
+
+    /// <summary>
+    /// The reach of a penned monster: the tiles <see cref="ReachSteps"/> steps beyond its pen, walking around the
+    /// walls. It chases on them, and only from them it can be hurt.
+    /// </summary>
+    /// <param name="area">The monster's spawn area.</param>
+    /// <param name="terrain">The map's terrain.</param>
+    /// <returns>The reach, or null when the monster isn't penned.</returns>
+    internal static Pen? GetReach(MonsterSpawnArea area, GameMapTerrain terrain)
+    {
+        if (!TryGetPenSteps(area, out var steps))
+        {
+            return null;
+        }
+
+        return Reaches.GetValue(area, a => Pen.Create(Centre(a), steps + ReachSteps, terrain));
+    }
+
+    /// <summary>
+    /// The steps of a penned spawn's pen from its middle: the map's (<see cref="PennedMaps"/>) plus half the
+    /// spawn's width, for a point or a small area (a group of a spot, at most <see cref="MaximumSpotSize"/> wide).
+    /// </summary>
+    private static bool TryGetPenSteps(MonsterSpawnArea area, out int steps)
+    {
+        steps = 0;
+        if (area.GameMap is not { } map
+            || !PennedMaps.TryGetValue(map.Number, out var mapSteps)
+            || mapSteps <= 0
+            || area.SpawnTrigger != SpawnTrigger.Automatic
+            || area.X2 - area.X1 >= MaximumSpotSize
+            || area.Y2 - area.Y1 >= MaximumSpotSize)
+        {
+            return false;
+        }
+
+        steps = mapSteps + (Math.Max(area.X2 - area.X1, area.Y2 - area.Y1) / 2);
+        return true;
+    }
+
+    private static Point Centre(MonsterSpawnArea area) => new((byte)((area.X1 + area.X2) / 2), (byte)((area.Y1 + area.Y2) / 2));
+
+    /// <summary>
+    /// Whether an attacker stands out of a penned monster's reach (from where the monster couldn't hit back).
+    /// </summary>
+    /// <param name="area">The monster's spawn area.</param>
+    /// <param name="terrain">The map's terrain.</param>
+    /// <param name="position">Where the attacker stands.</param>
+    /// <returns>True if the monster is penned and the attacker out of its reach.</returns>
+    public static bool IsOutOfReach(MonsterSpawnArea area, GameMapTerrain terrain, Point position)
+        => GetReach(area, terrain) is { } reach && !reach.Contains(position);
 
     /// <summary>
     /// The tiles a penned monster may stand on.

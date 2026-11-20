@@ -27,6 +27,13 @@ public class ItemPriceCalculator
     /// </summary>
     private const int ExcellentDropLevelIncrease = 25;
 
+    /// <summary>
+    /// Gets or sets a factor on what a merchant pays for an item of a definition (1 = a third of its price,
+    /// as calculated). Null (the default) leaves every price as it is. Set by the season's configuration at
+    /// the start (e.g. jewels sold for a tenth, so they stay the players' currency instead of a zen source).
+    /// </summary>
+    public static Func<ItemDefinition, double>? SellingPriceFactor { get; set; }
+
     private static readonly Dictionary<byte, int> DropLevelIncreaseByLevel = new()
     {
         { 5, 4 },
@@ -61,6 +68,11 @@ public class ItemPriceCalculator
         item.ThrowNotInitializedProperty(item.Definition is null, nameof(item.Definition));
 
         var sellingPrice = CalculateBuyingPrice(item) / 3;
+        if (SellingPriceFactor?.Invoke(item.Definition!) is { } factor and not 1.0)
+        {
+            sellingPrice = (long)(sellingPrice * Math.Max(factor, 0));
+        }
+
         if (item.Definition.PriceDefinition?.SellingPriceRounding == ItemPriceRounding.Tens)
         {
             return sellingPrice / 10 * 10;

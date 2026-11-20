@@ -45,6 +45,13 @@ public class DefaultDropGenerator : IDropGenerator
     /// of 1, every kill drops. Guaranteed groups and the selection out of a box aren't affected.
     /// </summary>
     public static double ChanceMultiplier { get; set; } = 1.0;
+
+    /// <summary>
+    /// Gets or sets which drop groups drop on which map: given a group and the number of the map of the kill,
+    /// false leaves the group out of that kill. Null (the default) lets every group drop everywhere.
+    /// Set by the season's configuration at the start (e.g. a feather only on its map, quest items not in events).
+    /// </summary>
+    public static Func<DropItemGroup, short, bool>? MapFilter { get; set; }
     private readonly byte _excellentItemDropLevelDelta;
 
     /// <summary>
@@ -83,14 +90,14 @@ public class DefaultDropGenerator : IDropGenerator
 
         if (monster.ObjectKind == NpcObjectKind.Destructible)
         {
-            this.PartitionDropGroups(monster.DropItemGroups ?? []);
+            this.PartitionDropGroups(monster.DropItemGroups ?? [], map.Number);
         }
         else
         {
-            this.PartitionDropGroups(monster.DropItemGroups ?? []);
-            this.PartitionDropGroups(character.DropItemGroups ?? [], monster);
-            this.PartitionDropGroups(map.DropItemGroups ?? [], monster);
-            this.PartitionDropGroups(await GetQuestItemGroupsAsync(player).ConfigureAwait(false) ?? [], monster);
+            this.PartitionDropGroups(monster.DropItemGroups ?? [], map.Number);
+            this.PartitionDropGroups(character.DropItemGroups ?? [], map.Number, monster);
+            this.PartitionDropGroups(map.DropItemGroups ?? [], map.Number, monster);
+            this.PartitionDropGroups(await GetQuestItemGroupsAsync(player).ConfigureAwait(false) ?? [], map.Number, monster);
         }
 
         uint money = 0;
@@ -344,11 +351,17 @@ public class DefaultDropGenerator : IDropGenerator
         return (droppedItems, money);
     }
 
-    private void PartitionDropGroups(IEnumerable<DropItemGroup> groups, MonsterDefinition? monster = null)
+    private void PartitionDropGroups(IEnumerable<DropItemGroup> groups, short mapNumber, MonsterDefinition? monster = null)
     {
+        var mapFilter = MapFilter;
         foreach (var group in groups)
         {
             if (monster is not null && !IsGroupRelevant(monster, group))
+            {
+                continue;
+            }
+
+            if (mapFilter is not null && !mapFilter(group, mapNumber))
             {
                 continue;
             }

@@ -70,7 +70,8 @@ public static class AttackableExtensions
         var floors = attacker is NPC.Monster && defender is Player && PvmHitFloors.For is { } floorsOf
             ? floorsOf(attacker, defender)
             : default;
-        if (!Rand.NextRandomBool(Math.Max(attacker.GetHitChanceTo(defender), floors.HitFloor)))
+        var hitChance = Math.Max(attacker.GetHitChanceTo(defender), floors.HitFloor);
+        if (!Rand.NextRandomBool(hitChance))
         {
             return new HitInfo(0, 0, DamageAttributes.Undefined, 0, 0, skill);
         }
@@ -103,6 +104,9 @@ public static class AttackableExtensions
 
         attacker.GetBaseDmg(skill, out int baseMinDamage, out int baseMaxDamage, out DamageType damageType);
         int dmg;
+
+        // With floors, the pet's wear comes from the original hit (see PvmFloors.DamageScale).
+        int? originalDamage = null;
         if (damageType == DamageType.Physical)
         {
             if (isExcellentHit)
@@ -139,6 +143,11 @@ public static class AttackableExtensions
 
             var rawDamage = dmg;
             dmg = (int)((dmg * duelDmgDec) - defense);
+            if (floors != default)
+            {
+                originalDamage = (int)((rawDamage / Math.Max(1, floors.DamageScale) * duelDmgDec) - defense);
+            }
+
             if (floors.DamageFloor > 0 || floors.HealthFloor > 0)
             {
                 // Monsters hit physically; the reductions after the defense still apply to the floors.
@@ -231,6 +240,23 @@ public static class AttackableExtensions
         }
 
         var petDamage = dmg;
+        if (originalDamage is { } original)
+        {
+            // Only as often as the original monster would hit.
+            var originalHitChance = attacker.GetHitChanceTo(defender, Math.Max(1, floors.AttackRateScale));
+            if (!Rand.NextRandomBool(originalHitChance / hitChance))
+            {
+                original = 0;
+            }
+
+            if (defender.Overrates(attacker))
+            {
+                original = (int)(original * 0.3);
+            }
+
+            original -= (int)(original * defender.Attributes[Stats.ArmorDamageDecrease]);
+            petDamage = original == 0 ? 0 : Math.Max(minLevelDmg, original);
+        }
 
         dmg = (int)(dmg * attacker.Attributes[Stats.AttackDamageIncrease]);
         if (dmg > 1)
@@ -742,7 +768,7 @@ public static class AttackableExtensions
         return defender.Attributes[Stats.DefenseRatePvm] + defender.Attributes[Stats.IncreaseBlockBonus];
     }
 
-    private static float GetHitChanceTo(this IAttacker attacker, IAttackable defender)
+    private static float GetHitChanceTo(this IAttacker attacker, IAttackable defender, float attackRateScale = 1)
     {
         float defenseRate;
         float attackRate;
@@ -754,7 +780,7 @@ public static class AttackableExtensions
         else
         {
             defenseRate = defender.GetDefenseRatePvm();
-            attackRate = attacker.Attributes[Stats.AttackRatePvm];
+            attackRate = attacker.Attributes[Stats.AttackRatePvm] / attackRateScale;
         }
 
         float hitChance = 0.03f;

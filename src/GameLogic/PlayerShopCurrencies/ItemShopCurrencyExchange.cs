@@ -192,7 +192,7 @@ public sealed class ItemShopCurrencyExchange : IShopCurrencyExchange
             }
             else if (item.Level <= MaximumBundleLevel && bundleDefinitions.Any(bundle => ShopPrice.IsSameItem(bundle, definition)))
             {
-                rows.Add((item, (item.Level + 1) * PiecesPerBundleLevel));
+                rows.Add((item, GetBundlePieces(item)));
             }
             else
             {
@@ -202,6 +202,17 @@ public sealed class ItemShopCurrencyExchange : IShopCurrencyExchange
 
         return rows;
     }
+
+    /// <summary>
+    /// Gets the number of pieces of a bundle.
+    /// </summary>
+    /// <param name="bundle">The bundle.</param>
+    /// <returns>
+    /// The durability of a bundle of level 0 with a durability above 1, which is a bundle of any size;
+    /// otherwise <see cref="PiecesPerBundleLevel"/> per level, as the jewel mix creates them.
+    /// </returns>
+    internal static int GetBundlePieces(Item bundle) =>
+        bundle.Level == 0 && bundle.Durability > 1 ? (int)bundle.Durability : (bundle.Level + 1) * PiecesPerBundleLevel;
 
     private async ValueTask UndoAsync(ShopPurchase purchase, IStorage buyerInventory, IStorage sellerInventory)
     {

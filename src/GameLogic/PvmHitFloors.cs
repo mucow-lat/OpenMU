@@ -26,4 +26,13 @@ public static class PvmHitFloors
 /// <param name="HitFloor">The lowest chance of the monster to hit.</param>
 /// <param name="HealthFloor">The share of the player's maximum health which a hit does at least, before the reductions after the defense.</param>
 /// <param name="SoulBarrierCap">The most the Soul Barrier takes from the hit (OpenMU's own cap is 0.9).</param>
-public readonly record struct PvmFloors(float DamageFloor, float HitFloor, float HealthFloor, float SoulBarrierCap);
+/// <param name="DamageScale">
+/// How many times stronger than its definition the monster hits (a server's stronger monsters); 0 or 1
+/// for the original. With floors, the pets wear from the original hit: the monster's damage divided by
+/// this, without the floors, so a stronger monster threatens the player but not the pet.
+/// </param>
+/// <param name="AttackRateScale">
+/// How many times its definition's attack rate the monster has; 0 or 1 for the original. The pets only
+/// wear from the hits which the original monster would land too.
+/// </param>
+public readonly record struct PvmFloors(float DamageFloor, float HitFloor, float HealthFloor, float SoulBarrierCap, float DamageScale = 0, float AttackRateScale = 0);
