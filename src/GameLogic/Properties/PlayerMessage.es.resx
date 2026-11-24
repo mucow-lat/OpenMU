@@ -884,6 +884,9 @@ Ampliaciones de inventario: {18}</value>
   <data name="CrywolfNoAltarContracted" xml:space="preserve">
     <value>Sin la protección de las Musas, robarán la estatua del lobo sagrado.</value>
   </data>
+  <data name="CrywolfAltarsLostGrace" xml:space="preserve">
+    <value>¡Ningún altar protegido! Las Musas tienen {0} segundos para volver a un altar.</value>
+  </data>
   <data name="CrywolfStatueAttack" xml:space="preserve">
     <value>¡El ejército de Balgass empieza a atacar la estatua del lobo sagrado!</value>
   </data>

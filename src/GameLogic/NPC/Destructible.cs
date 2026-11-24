@@ -12,6 +12,8 @@ using MUnique.OpenMU.PlugIns;
 /// </summary>
 public sealed class Destructible : AttackableNpcBase, IAttackable
 {
+    private readonly IEventStateProvider? _eventStateProvider;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="Destructible" /> class.
     /// </summary>
@@ -24,6 +26,7 @@ public sealed class Destructible : AttackableNpcBase, IAttackable
     public Destructible(MonsterSpawnArea spawnInfo, MonsterDefinition stats, GameMap map, IEventStateProvider? eventStateProvider, IDropGenerator dropGenerator, PlugInManager plugInManager)
         : base(spawnInfo, stats, map, eventStateProvider, dropGenerator, plugInManager)
     {
+        this._eventStateProvider = eventStateProvider;
     }
 
     /// <inheritdoc/>
@@ -46,4 +49,8 @@ public sealed class Destructible : AttackableNpcBase, IAttackable
         // A destructible is not an organism which can bleed.
         return ValueTask.CompletedTask;
     }
+
+    /// <inheritdoc />
+    protected override bool CanBeAttackedBy(IAttacker attacker) =>
+        this._eventStateProvider?.IsTargetLocked(this.Definition) is not true;
 }

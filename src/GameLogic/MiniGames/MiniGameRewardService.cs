@@ -225,7 +225,8 @@ internal sealed class MiniGameRewardService
                 continue;
             }
 
-            var droppedItem = new DroppedItem(item, player.RandomPosition, this._map, player, player.GetAsEnumerable());
+            // MuCow: only the winner can pick it up, not anyone after the priority time (2026-11-24, user).
+            var droppedItem = new DroppedItem(item, player.RandomPosition, this._map, player, player.GetAsEnumerable()) { OwnersOnly = true };
             this._logger.LogDebug("{context}: Reward {item} for {player} has been dropped by players coordinates {position}.", this._owner, item, player, player.Position);
             await this._map.AddAsync(droppedItem).ConfigureAwait(false);
         }

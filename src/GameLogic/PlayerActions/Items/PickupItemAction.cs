@@ -222,7 +222,7 @@ public class PickupItemAction
             return await RejectAsync(player, droppedItem, nameof(PlayerMessage.ItemDoesNotBelongToYou)).ConfigureAwait(false);
         }
 
-        if (droppedItem.Item.Definition?.IsBoundToCharacter == true
+        if ((droppedItem.Item.Definition?.IsBoundToCharacter == true || droppedItem.OwnersOnly)
             && !droppedItem.IsPlayerAnOwner(player))
         {
             return await RejectAsync(player, droppedItem, nameof(PlayerMessage.ItemDoesNotBelongToYou)).ConfigureAwait(false);

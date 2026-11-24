@@ -23,4 +23,12 @@ public interface IEventStateProvider
     /// <param name="waveNumber">The number of the wave.</param>
     /// <returns><see langword="true"/>, when the spawn wave is active; Otherwise, <see langword="false"/>.</returns>
     bool IsSpawnWaveActive(byte waveNumber);
+
+    /// <summary>
+    /// Determines, if a target of the event can't be attacked yet, because an earlier goal is not
+    /// reached, e.g. the castle gate of the blood castle before the bridge appeared.
+    /// </summary>
+    /// <param name="definition">The definition of the target.</param>
+    /// <returns><see langword="true"/>, when the target can't be attacked yet.</returns>
+    bool IsTargetLocked(MonsterDefinition definition) => false;
 }

@@ -985,6 +985,9 @@ Inventory Extensions: {18}</value>
   <data name="CrywolfNoAltarContracted" xml:space="preserve">
     <value>Without the protection of the Muses, the statue of the holy wolf will be stolen.</value>
   </data>
+  <data name="CrywolfAltarsLostGrace" xml:space="preserve">
+    <value>No altar is protected! The Muses have {0} seconds to contract an altar again.</value>
+  </data>
   <data name="CrywolfStatueAttack" xml:space="preserve">
     <value>The army of Balgass starts attacking the statue of the holy wolf!</value>
   </data>

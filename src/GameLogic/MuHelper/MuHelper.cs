@@ -4,10 +4,12 @@
 
 namespace MUnique.OpenMU.GameLogic.MuHelper;
 
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
 using MUnique.OpenMU.AttributeSystem;
 using MUnique.OpenMU.GameLogic.Attributes;
+using MUnique.OpenMU.GameLogic.PlugIns;
 using MUnique.OpenMU.GameLogic.PlugIns.ChatCommands;
 using MUnique.OpenMU.GameLogic.Views.MuHelper;
 
@@ -67,6 +69,16 @@ public class MuHelper : AsyncDisposable
         {
             await this._player.ShowLocalizedBlueMessageAsync(nameof(PlayerMessage.MuHelperMaximumLevel), this._configuration.MaxLevel).ConfigureAwait(false);
             return false;
+        }
+
+        if (this._player.GameContext.PlugInManager.GetPlugInPoint<IMuHelperStartRestrictionPlugIn>() is { } restriction)
+        {
+            var eventArgs = new CancelEventArgs();
+            await restriction.CheckStartAsync(this._player, eventArgs).ConfigureAwait(false);
+            if (eventArgs.Cancel)
+            {
+                return false;
+            }
         }
 
         this._startTimestamp = DateTime.UtcNow;

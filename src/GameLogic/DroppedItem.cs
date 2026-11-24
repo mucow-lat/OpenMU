@@ -86,6 +86,12 @@ public sealed class DroppedItem : AsyncDisposable, ILocateable
     public GameMap CurrentMap { get; }
 
     /// <summary>
+    /// Gets a value indicating whether only the owners can ever pick the item up, not only during
+    /// the priority period (MuCow: the bosses' rewards, which drop at the feet of each player who earned one).
+    /// </summary>
+    public bool OwnersOnly { get; init; }
+
+    /// <summary>
     /// Gets a value indicating whether the owner-pickup priority period is still active.
     /// </summary>
     public bool IsOwnerPickupPriorityActive => DateTime.UtcNow < this._dropTimestamp.Add(TimeUntilDropIsFree);
@@ -104,7 +110,7 @@ public sealed class DroppedItem : AsyncDisposable, ILocateable
     public async ValueTask<(bool Success, Item? StackTarget)> TryPickUpByAsync(Player player)
     {
         Item? stackTarget = null;
-        if (!this._availableToPick)
+        if (!this._availableToPick || (this.OwnersOnly && !this.IsPlayerAnOwner(player)))
         {
             return (false, stackTarget);
         }

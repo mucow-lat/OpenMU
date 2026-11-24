@@ -58,6 +58,11 @@ public sealed class CrywolfContext : IEventStateProvider, IDisposable
     private DateTime _lastAltarInfo = DateTime.MinValue;
     private DateTime _lastBossMonsterInfo = DateTime.MinValue;
     private int _lastRemainingTimeStep = -1;
+
+    /// <summary>
+    /// Since when no altar is contracted during the battle, while the <see cref="CrywolfEventDefinition.AltarGracePeriod"/> runs.
+    /// </summary>
+    private DateTime? _noAltarSince;
     private int _contractedAltarCount;
     private bool _isBalgassAppearanceDone;
     private bool _isStatueAttackStarted;
@@ -421,6 +426,11 @@ public sealed class CrywolfContext : IEventStateProvider, IDisposable
         }
 
         var altarNumber = altar.Index + 1;
+        if (result != CrywolfContractResult.AlreadyContracting)
+        {
+            this._logger.LogInformation("[Crywolf] {player} at {position} tried to contract altar {altar}: {result}.", player.Name, player.Position, altarNumber, result);
+        }
+
         switch (result)
         {
             case CrywolfContractResult.AlreadyContracting:
@@ -697,12 +707,51 @@ public sealed class CrywolfContext : IEventStateProvider, IDisposable
         this._lastAltarInfo = DateTime.MinValue;
         this._lastBossMonsterInfo = DateTime.MinValue;
         this._lastRemainingTimeStep = -1;
-        if (this.CountContractedAltars() == 0)
+        this._noAltarSince = null;
+
+        // With a grace period, an elf whose contract is still being validated or who arrives late
+        // gets the time of UpdateBattleAsync, instead of losing the battle right at its start.
+        if (this._definition.AltarGracePeriod <= TimeSpan.Zero && this.CountContractedAltars() == 0)
         {
             await this.ShowMessageToMapPlayersAsync(nameof(PlayerMessage.CrywolfNoAltarContracted)).ConfigureAwait(false);
             this.Occupation = CrywolfOccupationState.Occupied;
             await this.ChangeStateAsync(CrywolfState.End).ConfigureAwait(false);
         }
+    }
+
+    /// <summary>
+    /// Checks if the battle is lost, because no altar is contracted (anymore) and the grace period is over.
+    /// </summary>
+    /// <returns><c>true</c>, if the battle is lost.</returns>
+    private async ValueTask<bool> IsLostWithoutAltarsAsync()
+    {
+        if (this.CountContractedAltars() > 0)
+        {
+            if (this._noAltarSince is not null)
+            {
+                this._noAltarSince = null;
+                this._logger.LogInformation("[Crywolf] An altar is contracted again, the battle goes on.");
+            }
+
+            return false;
+        }
+
+        var grace = this._definition.AltarGracePeriod;
+        if (grace <= TimeSpan.Zero)
+        {
+            return true;
+        }
+
+        var now = DateTime.UtcNow;
+        if (this._noAltarSince is not { } since)
+        {
+            this._noAltarSince = now;
+            this._logger.LogInformation("[Crywolf] No altar is contracted, {seconds} seconds to contract one again.", (int)grace.TotalSeconds);
+            await this.ShowMessageToMapPlayersAsync(nameof(PlayerMessage.CrywolfAltarsLostGrace), (int)grace.TotalSeconds).ConfigureAwait(false);
+            return false;
+        }
+
+        return now - since >= grace;
     }
 
     private async ValueTask UpdateBattleAsync(TimeSpan elapsed)
@@ -717,7 +766,7 @@ public sealed class CrywolfContext : IEventStateProvider, IDisposable
             return;
         }
 
-        if (this.CountContractedAltars() == 0)
+        if (await this.IsLostWithoutAltarsAsync().ConfigureAwait(false))
         {
             await this.ShowMessageToMapPlayersAsync(nameof(PlayerMessage.CrywolfNoAltarContracted)).ConfigureAwait(false);
             this.Occupation = CrywolfOccupationState.Occupied;
@@ -873,7 +922,7 @@ public sealed class CrywolfContext : IEventStateProvider, IDisposable
         }
 
         var item = new TemporaryItem { Definition = definition, Durability = 1 };
-        await map.AddAsync(new DroppedItem(item, player.Position, map, null, player.GetAsEnumerable())).ConfigureAwait(false);
+        await map.AddAsync(new DroppedItem(item, player.Position, map, null, player.GetAsEnumerable()) { OwnersOnly = true }).ConfigureAwait(false);
     }
 
     private async ValueTask UpdateAltarsAsync()
@@ -897,11 +946,22 @@ public sealed class CrywolfContext : IEventStateProvider, IDisposable
             var altarNumber = altar.Index + 1;
             if (change == CrywolfContractChange.Validated)
             {
+                this._logger.LogInformation("[Crywolf] {player} contracted altar {altar}.", contractor.Name, altarNumber);
                 await contractor.ShowLocalizedBlueMessageAsync(nameof(PlayerMessage.CrywolfContractValid), altarNumber).ConfigureAwait(false);
                 await this.ShowMessageToMapPlayersAsync(nameof(PlayerMessage.CrywolfContractValidToOthers), contractor.Name, altarNumber).ConfigureAwait(false);
             }
             else if (change == CrywolfContractChange.Cancelled)
             {
+                this._logger.LogInformation(
+                    "[Crywolf] The contract of {player} with altar {altar} ({altarX}, {altarY}) was cancelled: alive {alive}, state {state}, map {map}, position {position}.",
+                    contractor.Name,
+                    altarNumber,
+                    altar.Npc.Position.X,
+                    altar.Npc.Position.Y,
+                    contractor.IsAlive,
+                    contractor.PlayerState.CurrentState,
+                    contractor.CurrentMap?.Definition.Number,
+                    contractor.Position);
                 await contractor.ShowLocalizedBlueMessageAsync(nameof(PlayerMessage.CrywolfContractCancelled), altarNumber).ConfigureAwait(false);
             }
             else

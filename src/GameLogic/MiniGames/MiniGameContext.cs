@@ -268,6 +268,12 @@ public class MiniGameContext : AsyncDisposable, IEventStateProvider
         return this._spawnWaves.IsActive(waveNumber);
     }
 
+    /// <inheritdoc />
+    public bool IsTargetLocked(MonsterDefinition definition)
+    {
+        return this._changeEvents.IsTargetLocked(definition);
+    }
+
     /// <summary>
     /// Gets the spawn gate at which the specified player should be placed on this game's map.
     /// </summary>

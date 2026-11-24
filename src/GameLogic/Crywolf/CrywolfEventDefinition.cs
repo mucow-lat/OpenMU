@@ -121,6 +121,12 @@ public class CrywolfEventDefinition
     public TimeSpan AltarCooldown { get; set; } = TimeSpan.FromSeconds(10);
 
     /// <summary>
+    /// Gets or sets the time the elves have to contract an altar again, after no altar is contracted during the battle.
+    /// When it's zero, the battle is lost as soon as no altar is contracted, like in the original game.
+    /// </summary>
+    public TimeSpan AltarGracePeriod { get; set; } = TimeSpan.Zero;
+
+    /// <summary>
     /// Gets or sets the number of the Dark Elf, which leads a group of the army.
     /// </summary>
     public short DarkElfNumber { get; set; } = 340;

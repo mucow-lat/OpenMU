@@ -482,6 +482,15 @@ namespace MUnique.OpenMU.GameLogic.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to No altar is protected! The Muses have {0} seconds to contract an altar again..
+        /// </summary>
+        public static string CrywolfAltarsLostGrace {
+            get {
+                return ResourceManager.GetString("CrywolfAltarsLostGrace", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Without the protection of the Muses, the statue of the holy wolf will be stolen..
         /// </summary>
         public static string CrywolfNoAltarContracted {

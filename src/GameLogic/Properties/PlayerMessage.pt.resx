@@ -943,6 +943,9 @@ Extensões de inventário: {18}</value>
   <data name="CrywolfNoAltarContracted" xml:space="preserve">
     <value>Sem a proteção das Muses, a estátua do lobo sagrado será roubada.</value>
   </data>
+  <data name="CrywolfAltarsLostGrace" xml:space="preserve">
+    <value>Nenhum altar protegido! As Muses têm {0} segundos para voltar a um altar.</value>
+  </data>
   <data name="CrywolfStatueAttack" xml:space="preserve">
     <value>O exército de Balgass começa a atacar a estátua do lobo sagrado!</value>
   </data>

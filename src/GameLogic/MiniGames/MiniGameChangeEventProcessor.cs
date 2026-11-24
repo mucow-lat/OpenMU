@@ -114,6 +114,22 @@ internal sealed class MiniGameChangeEventProcessor
     }
 
     /// <summary>
+    /// Determines, if a specific target of a later event can't be attacked yet: killing it before
+    /// its event is the current one would never apply that event, e.g. the blood castle gate
+    /// destroyed from afar before the bridge appeared kept the castle closed.
+    /// </summary>
+    /// <param name="definition">The definition of the target.</param>
+    /// <returns><see langword="true"/>, when an event which is not the current one waits for this target.</returns>
+    public bool IsTargetLocked(MonsterDefinition definition)
+    {
+        var current = this.Current;
+        return this._remainingEvents.ToArray().Any(e =>
+            e != current
+            && e.Definition.Target == KillTarget.Specific
+            && e.Definition.TargetDefinition?.Number == definition.Number);
+    }
+
+    /// <summary>
     /// Sends the terrain changes which were applied so far to the player, e.g. because
     /// it entered the map after they were applied, when it rejoined the game.
     /// </summary>
