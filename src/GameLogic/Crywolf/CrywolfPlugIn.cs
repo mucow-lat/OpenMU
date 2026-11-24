@@ -13,6 +13,7 @@ using MUnique.OpenMU.AttributeSystem;
 using MUnique.OpenMU.GameLogic.Attributes;
 using MUnique.OpenMU.GameLogic.NPC;
 using MUnique.OpenMU.GameLogic.PlugIns;
+using MUnique.OpenMU.GameLogic.PlugIns.PeriodicTasks;
 using MUnique.OpenMU.Pathfinding;
 using MUnique.OpenMU.PlugIns;
 
@@ -31,7 +32,7 @@ using MUnique.OpenMU.PlugIns;
 [PlugIn]
 [Display(Name = nameof(PlugInResources.CrywolfPlugIn_Name), Description = nameof(PlugInResources.CrywolfPlugIn_Description), ResourceType = typeof(PlugInResources))]
 [Guid("3E8B5C27-9D41-4A6F-B2C8-7F1D6E0A9B34")]
-public sealed class CrywolfPlugIn : IFeaturePlugIn, IPeriodicTaskPlugIn, ISupportCustomConfiguration<CrywolfEventDefinition>, ISupportDefaultCustomConfiguration,
+public sealed class CrywolfPlugIn : IFeaturePlugIn, IPeriodicTaskPlugIn, IScheduledPlugIn, ISupportCustomConfiguration<CrywolfEventDefinition>, ISupportDefaultCustomConfiguration,
     IObjectAddedToMapPlugIn, IObjectRemovedFromMapPlugIn, IPlayerStateChangedPlugIn, IMonsterItemDropPlugIn, IDisposable
 {
     private readonly ConcurrentDictionary<IGameContext, CrywolfContext> _contexts = new();
@@ -67,6 +68,12 @@ public sealed class CrywolfPlugIn : IFeaturePlugIn, IPeriodicTaskPlugIn, ISuppor
 
     /// <inheritdoc />
     public CrywolfEventDefinition? Configuration { get; set; }
+
+    /// <inheritdoc />
+    public DateTime? GetNextStartUtc(DateTime utcNow, TimeZoneInfo serverTimeZone)
+    {
+        return this.Configuration?.GetNextStartUtc(utcNow, serverTimeZone);
+    }
 
     /// <summary>
     /// Gets the context of the crywolf event of the game context, if it's running.

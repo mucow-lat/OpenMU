@@ -128,7 +128,11 @@ public class RefineStoneCrafting : SimpleItemCraftingHandler
                && item.IsWearable()
                && !item.IsAncient()
                && !item.ItemOptions.Any(o => o.ItemOption?.OptionType == ItemOptionTypes.HarmonyOption)
-               && (!this._excludedItems.Contains((item.Definition!.Group, item.Definition.Number)) || item.Level > 3);
+               && (!this._excludedItems.Contains((item.Definition!.Group, item.Definition.Number)) || item.Level > 3)
+
+               // Both requirements take any amount, and they are checked in the stored order: without this,
+               // the lower stones' requirement could take the excellent items before the higher stones' one.
+               && (requiredItem.Reference != LowerRefineStoneReference || !item.IsExcellent());
     }
 
     /// <inheritdoc />
@@ -140,15 +144,16 @@ public class RefineStoneCrafting : SimpleItemCraftingHandler
         var lowerRefineStoneItems = referencedItems
             .FirstOrDefault(r => r.ItemRequirement.Reference == LowerRefineStoneReference)?.Items.Count() ?? 0;
 
+        // As the original Season 2 server (SmeltingStoneSuccesRateExcellent = 50, ...Normal = 20, commonserver.cfg).
         var result = new List<Item>();
         if (higherRefineStoneItems > 0)
         {
-            result.AddRange(await this.CreateRefineStonesAsync(higherRefineStoneItems, 75, 44, player).ConfigureAwait(false));
+            result.AddRange(await this.CreateRefineStonesAsync(higherRefineStoneItems, 50, 44, player).ConfigureAwait(false));
         }
 
         if (lowerRefineStoneItems > 0)
         {
-            result.AddRange(await this.CreateRefineStonesAsync(lowerRefineStoneItems, 40, 43, player).ConfigureAwait(false));
+            result.AddRange(await this.CreateRefineStonesAsync(lowerRefineStoneItems, 20, 43, player).ConfigureAwait(false));
         }
 
         return result;

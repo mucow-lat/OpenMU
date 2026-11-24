@@ -149,8 +149,15 @@ public class PickupItemAction
         return player.IsAlive ? $"too far away (maximum {MaximumPickupDistance})" : "player is dead";
     }
 
-    private static bool IsLimitReached(Player player, ItemDefinition? itemDefinition)
+    /// <summary>
+    /// Whether the character already holds as many of this item as its definition allows.
+    /// Only items of the same level count: one definition can be several items, e.g. 13/20 is the
+    /// Wizard's Ring at level 0 and the Ring of Warrior at levels 1 and 2, and wearing a Ring of
+    /// Warrior must not keep the character from picking up the Wizard's Ring.
+    /// </summary>
+    private static bool IsLimitReached(Player player, Item droppedItem)
     {
+        var itemDefinition = droppedItem.Definition;
         if (itemDefinition is null)
         {
             return true;
@@ -161,7 +168,7 @@ public class PickupItemAction
             return false;
         }
 
-        return player.Inventory?.Items.Count(item => item.Definition == itemDefinition) >= itemDefinition.StorageLimitPerCharacter;
+        return player.Inventory?.Items.Count(item => item.Definition == itemDefinition && item.Level == droppedItem.Level) >= itemDefinition.StorageLimitPerCharacter;
     }
 
     private static bool PlayerHasActiveQuestForItem(Player player, Item item)
@@ -187,7 +194,7 @@ public class PickupItemAction
             return (false, null);
         }
 
-        if (IsLimitReached(player, droppedItem.Item.Definition))
+        if (IsLimitReached(player, droppedItem.Item))
         {
             var itemName = string.Empty;
             using (CultureHelper.SetTemporaryCulture(player.Culture))

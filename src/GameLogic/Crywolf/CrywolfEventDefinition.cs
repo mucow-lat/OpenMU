@@ -297,7 +297,7 @@ public class CrywolfEventDefinition
     /// <summary>
     /// Gets or sets the number of the item, which is dropped for the contractors and heroes when the fortress has been defended.
     /// </summary>
-    public short RewardItemNumber { get; set; } = 13;
+    public short RewardItemNumber { get; set; } = 14;
 
     /// <summary>
     /// Gets or sets the numbers of the NPCs of the crywolf map, which stay visible when the fortress is occupied.
@@ -361,6 +361,36 @@ public class CrywolfEventDefinition
         var earlier = time.Add(TimeSpan.FromSeconds(-5));
         return this.StartDays.Contains(localTime.DayOfWeek)
                && this.StartTimes.Any(startTime => startTime.IsBetween(earlier, time));
+    }
+
+    /// <summary>
+    /// Gets the next start of the event after the specified time, within the next week.
+    /// </summary>
+    /// <param name="utcNow">The current time, in UTC.</param>
+    /// <param name="serverTimeZone">The time zone of the server, in which the start times are defined.</param>
+    /// <returns>The next start, in UTC; or <see langword="null"/>, if the event has no start day or time.</returns>
+    public DateTime? GetNextStartUtc(DateTime utcNow, TimeZoneInfo serverTimeZone)
+    {
+        var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utcNow, DateTimeKind.Utc), serverTimeZone);
+        for (var day = 0; day <= 7; day++)
+        {
+            var date = localNow.Date.AddDays(day);
+            if (!this.StartDays.Contains(date.DayOfWeek))
+            {
+                continue;
+            }
+
+            foreach (var startTime in this.StartTimes.OrderBy(time => time))
+            {
+                var localStart = DateTime.SpecifyKind(date + startTime.ToTimeSpan(), DateTimeKind.Unspecified);
+                if (localStart > localNow && !serverTimeZone.IsInvalidTime(localStart))
+                {
+                    return TimeZoneInfo.ConvertTimeToUtc(localStart, serverTimeZone);
+                }
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

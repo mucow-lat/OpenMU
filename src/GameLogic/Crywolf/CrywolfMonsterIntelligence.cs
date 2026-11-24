@@ -97,6 +97,13 @@ public sealed class CrywolfMonsterIntelligence : INpcIntelligence, IDisposable
     public bool CanWalkOnSafezone => false;
 
     /// <inheritdoc />
+    /// <remarks>
+    /// While the army waits for the battle, it doesn't move or attack, so it can't be attacked either.
+    /// Otherwise, it could be killed without any risk before the battle.
+    /// </remarks>
+    public bool CanBeAttacked => this._context.ArmyStage != CrywolfArmyStage.Waiting;
+
+    /// <inheritdoc />
     public void RegisterHit(IAttacker attacker)
     {
         if (attacker is IAttackable attackable)

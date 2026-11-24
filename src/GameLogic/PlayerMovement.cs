@@ -53,6 +53,12 @@ internal sealed class PlayerMovement : IDisposable
     /// </summary>
     private const double UnchargedCorrectionRecoveryFactor = 0.5;
 
+    /// <summary>
+    /// How long after the server moved the player (<see cref="MoveAsync"/>) a walk request which
+    /// still starts where the client had the player before is taken as sent before the client knew.
+    /// </summary>
+    private static readonly TimeSpan ForcedMoveGrace = TimeSpan.FromMilliseconds(1500);
+
     private readonly Player _player;
 
     private readonly object _correctionLock = new();
@@ -74,6 +80,12 @@ internal sealed class PlayerMovement : IDisposable
     private double _unchargedCorrectionDistance;
 
     private long _lastCorrectionTimestamp = TimeProvider.System.GetTimestamp();
+
+    /// <summary>
+    /// The timestamp of the last move the server forced on the player (<see cref="MoveAsync"/>), e.g.
+    /// the blow of an exploding monster in Chaos Castle. Zero if there was none.
+    /// </summary>
+    private long _lastForcedMoveTimestamp;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PlayerMovement"/> class.
@@ -111,6 +123,7 @@ internal sealed class PlayerMovement : IDisposable
         await this._walker.StopAsync().ConfigureAwait(false);
         await this.ResetMovementStateAsync().ConfigureAwait(false);
         this.ResetUnchargedCorrections();
+        Volatile.Write(ref this._lastForcedMoveTimestamp, TimeProvider.System.GetTimestamp());
 
         await this.MoveOnMapAsync(this._player.CurrentMap!, target, MoveType.Instant).ConfigureAwait(false);
         this._player.Logger.LogDebug("MoveAsync: Observer Count: {0}", this._player.Observers.Count);
@@ -141,6 +154,17 @@ internal sealed class PlayerMovement : IDisposable
 
         if (steps.IsEmpty)
         {
+            return;
+        }
+
+        if (this.IsStaleWalkAfterForcedMove(steps.Span[0].From))
+        {
+            // The client sent it before it got the move we forced (it's on its way to it): not a
+            // speed hack, and taking its start would undo the move. Dropped; the move corrects it.
+            this._player.Logger.LogDebug(
+                "WalkToAsync: Ignored a walk from {0}, sent before the client knew the server moved the player to {1}.",
+                steps.Span[0].From,
+                this._player.Position);
             return;
         }
 
@@ -305,6 +329,25 @@ internal sealed class PlayerMovement : IDisposable
         }
 
         return steps.Length;
+    }
+
+    /// <summary>
+    /// Determines whether a walk request starts away from our position shortly after the server
+    /// moved the player (<see cref="MoveAsync"/>), so the client sent it before it knew.
+    /// </summary>
+    /// <param name="start">The start of the requested walk.</param>
+    /// <returns><c>True</c>, if the walk request is stale; Otherwise, <c>false</c>.</returns>
+    /// <remarks>
+    /// Without this, an exploding monster in Chaos Castle (up to 4 tiles on each axis) counted as
+    /// a speed hack: a start over 5 tiles away was scored as a position mismatch, a closer one was
+    /// taken over and charged to the walk speed check as if the player had walked it at once.
+    /// </remarks>
+    private bool IsStaleWalkAfterForcedMove(Point start)
+    {
+        var forcedMove = Volatile.Read(ref this._lastForcedMoveTimestamp);
+        return forcedMove != 0
+            && TimeProvider.System.GetElapsedTime(forcedMove) < ForcedMoveGrace
+            && start.EuclideanDistanceTo(this._player.Position) > NextTileDistance;
     }
 
     private void MarkPositionChanged()

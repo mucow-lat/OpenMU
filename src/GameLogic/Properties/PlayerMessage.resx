@@ -1058,7 +1058,7 @@ Inventory Extensions: {18}</value>
     <value>The crywolf event is not active.</value>
   </data>
   <data name="CrywolfProceeds" xml:space="preserve">
-    <value>The crywolf event proceeds from the state {0}.</value>
+    <value>The waiting time of the crywolf state {0} is skipped.</value>
   </data>
   <data name="CrywolfAltarNotAvailable" xml:space="preserve">
     <value>The altar ({0}) of the holy wolf can not be contracted now.</value>

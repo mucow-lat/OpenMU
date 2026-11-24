@@ -219,6 +219,9 @@ internal sealed class MiniGameRewardService
             {
                 var inventoryItem = inventory.GetItem(slot)!;
                 await player.InvokeViewPlugInAsync<IItemAppearPlugIn>(view => view.ItemAppearAsync(inventoryItem)).ConfigureAwait(false);
+
+                // MuCow: a reward put straight into the inventory isn't seen; a line says so (2026-11-23).
+                await player.ShowBlueMessageAsync($"Premio del evento: {RewardName(item)}, en tu inventario.").ConfigureAwait(false);
                 continue;
             }
 
@@ -226,6 +229,21 @@ internal sealed class MiniGameRewardService
             this._logger.LogDebug("{context}: Reward {item} for {player} has been dropped by players coordinates {position}.", this._owner, item, player, player.Position);
             await this._map.AddAsync(droppedItem).ConfigureAwait(false);
         }
+    }
+
+    /// <summary>
+    /// MuCow: an item's name for the reward line, the Box of Luck +8..+12 as the Box of Kundun +1..+5.
+    /// </summary>
+    private static string RewardName(Item item)
+    {
+        var definition = item.Definition!;
+        if (definition is { Group: 14, Number: 11 } && item.Level is >= 8 and <= 12)
+        {
+            return $"Box of Kundun +{item.Level - 7}";
+        }
+
+        var name = definition.Name.ValueInNeutralLanguage;
+        return item.Level > 0 ? $"{name} +{item.Level}" : name;
     }
 
     private bool DoesRewardApply(Player player, int playerRank, MiniGameReward reward)

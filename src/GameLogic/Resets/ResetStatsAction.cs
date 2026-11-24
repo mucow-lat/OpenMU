@@ -156,6 +156,9 @@ public class ResetStatsAction
 
     private async ValueTask MoveHomeAsync()
     {
+        // Out of an event first: the logout would warp the player to the event's safe zone, over its home
+        // (a reset in Kanturu's Refinery Tower came back in Kanturu). Leaving the map still takes it out of the event.
+        this._player.CurrentMiniGame = null;
         var homeMapDef = this._player.SelectedCharacter!.CharacterClass!.HomeMap;
         if (homeMapDef is { }
             && await this._player.GameContext.GetMapAsync((ushort)homeMapDef.Number).ConfigureAwait(false) is { SafeZoneSpawnGate: { } spawnGate })

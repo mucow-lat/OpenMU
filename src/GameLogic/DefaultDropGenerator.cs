@@ -52,6 +52,23 @@ public class DefaultDropGenerator : IDropGenerator
     /// Set by the season's configuration at the start (e.g. a feather only on its map, quest items not in events).
     /// </summary>
     public static Func<DropItemGroup, short, bool>? MapFilter { get; set; }
+
+    /// <summary>
+    /// Gets or sets the chance of luck of the items a drop group gives, in place of the luck option's own
+    /// chance: given a group, a chance between 0 and 1, or null to keep the option's. Null (the default)
+    /// keeps it for every group. Set by the season's configuration at the start (e.g. a boss' ancient items).
+    /// </summary>
+    public static Func<DropItemGroup, double?>? LuckChance { get; set; }
+
+    /// <summary>
+    /// Gets or sets the chances of the excellent options after the first of the excellent items a drop
+    /// group gives, in place of the excellent option's own chance and maximum: given a group, the chance
+    /// of the second option, of the third if the second came, and so on; null keeps the option's.
+    /// Null (the default) keeps it for every group. Set by the season's configuration at the start
+    /// (e.g. a box with more options).
+    /// </summary>
+    public static Func<DropItemGroup, IReadOnlyList<double>?>? ExcellentOptionChances { get; set; }
+
     private readonly byte _excellentItemDropLevelDelta;
 
     /// <summary>
@@ -410,6 +427,8 @@ public class DefaultDropGenerator : IDropGenerator
         }
 
         item.Level = Math.Min(item.Level, item.Definition!.MaximumItemLevel);
+        this.ApplyGroupLuck(item, selectedGroup);
+        this.ApplyGroupExcellentOptions(item, selectedGroup);
 
         return item;
     }
@@ -550,7 +569,72 @@ public class DefaultDropGenerator : IDropGenerator
             droppedMoney = (uint)(gainedExperience + BaseMoneyDrop);
         }
 
+        if (item is not null)
+        {
+            this.ApplyGroupLuck(item, selectedGroup);
+        }
+
         return item;
+    }
+
+    /// <summary>
+    /// Rolls the luck of an item again with the chance <see cref="LuckChance"/> gives its group, if any.
+    /// </summary>
+    private void ApplyGroupLuck(Item item, DropItemGroup group)
+    {
+        if (LuckChance?.Invoke(group) is not { } chance
+            || item.Definition?.PossibleItemOptions
+                .SelectMany(o => o.PossibleOptions)
+                .FirstOrDefault(o => object.Equals(o.OptionType, ItemOptionTypes.Luck)) is not { } luck)
+        {
+            return;
+        }
+
+        foreach (var link in item.ItemOptions.Where(l => object.Equals(l.ItemOption?.OptionType, ItemOptionTypes.Luck)).ToList())
+        {
+            item.ItemOptions.Remove(link);
+        }
+
+        if (this._randomizer.NextRandomBool(chance))
+        {
+            item.ItemOptions.Add(new ItemOptionLink { ItemOption = luck });
+        }
+    }
+
+    /// <summary>
+    /// Rolls the excellent options after the first of an excellent item again with the chances
+    /// <see cref="ExcellentOptionChances"/> gives its group, if any.
+    /// </summary>
+    private void ApplyGroupExcellentOptions(Item item, DropItemGroup group)
+    {
+        if (ExcellentOptionChances?.Invoke(group) is not { } chances
+            || item.Definition?.PossibleItemOptions.FirstOrDefault(
+                o => o.PossibleOptions.Any(p => object.Equals(p.OptionType, ItemOptionTypes.Excellent))) is not { } excellentOptions)
+        {
+            return;
+        }
+
+        var links = item.ItemOptions.Where(l => object.Equals(l.ItemOption?.OptionType, ItemOptionTypes.Excellent)).ToList();
+        if (links.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var extra in links.Skip(1))
+        {
+            item.ItemOptions.Remove(extra);
+        }
+
+        foreach (var chance in chances)
+        {
+            var remaining = excellentOptions.PossibleOptions.Where(o => item.ItemOptions.All(l => l.ItemOption != o)).ToList();
+            if (remaining.Count == 0 || !this._randomizer.NextRandomBool(chance))
+            {
+                break;
+            }
+
+            item.ItemOptions.Add(new ItemOptionLink { ItemOption = remaining.SelectRandom(this._randomizer)! });
+        }
     }
 
     private Item? GenerateItemFromGroup(MonsterDefinition monster, DropItemGroup selectedGroup)

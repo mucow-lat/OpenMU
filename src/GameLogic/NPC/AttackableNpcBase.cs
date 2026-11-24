@@ -4,6 +4,7 @@
 
 namespace MUnique.OpenMU.GameLogic.NPC;
 
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
@@ -26,6 +27,8 @@ public abstract class AttackableNpcBase : NonPlayerCharacter, IAttackable
     private readonly IEventStateProvider? _eventStateProvider;
     private readonly IDropGenerator _dropGenerator;
     private readonly PlugInManager _plugInManager;
+
+    private readonly ConcurrentDictionary<Player, long> _damageByPlayer = new();
 
     private int _health;
 
@@ -52,6 +55,27 @@ public abstract class AttackableNpcBase : NonPlayerCharacter, IAttackable
     /// Occurs when this instance died.
     /// </summary>
     public event EventHandler<DeathInformation>? Died;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether every player who hit a monster gets experience when it
+    /// dies, with his party, and not only the killer's. Each gets what OpenMU calculates; an
+    /// <see cref="IExperienceCalculationPlugIn"/> can scale it by <see cref="DamageByPlayer"/>.
+    /// False (the default) keeps OpenMU's: only the killer and his party.
+    /// </summary>
+    public static bool ExperienceToEveryAttacker { get; set; }
+
+    /// <summary>
+    /// Gets or sets a replacement for the time a killed instance waits before it respawns: given the
+    /// instance and its definition's <see cref="MonsterDefinition.RespawnDelay"/>, it returns the time
+    /// to wait (e.g. shorter on one map). Null (the default) keeps the definition's.
+    /// </summary>
+    public static Func<AttackableNpcBase, TimeSpan, TimeSpan>? RespawnDelayOverride { get; set; }
+
+    /// <summary>
+    /// Gets the damage each player (or his pet or summon) did to this instance since it spawned, for
+    /// the plugins (experience, rewards). It's cleared when it spawns again.
+    /// </summary>
+    public IReadOnlyDictionary<Player, long> DamageByPlayer => this._damageByPlayer;
 
     /// <inheritdoc />
     public IAttributeSystem Attributes { get; }
@@ -174,6 +198,7 @@ public abstract class AttackableNpcBase : NonPlayerCharacter, IAttackable
     public override void Initialize()
     {
         base.Initialize();
+        this._damageByPlayer.Clear();
         this.Health = this.SpawnArea.MaximumHealthOverride ?? (int)this.Attributes[Stats.MaximumHealth];
         this.IsAlive = true;
     }
@@ -228,6 +253,11 @@ public abstract class AttackableNpcBase : NonPlayerCharacter, IAttackable
         var killed = this.TryHit(hitInfo.TotalDamage, attacker);
 
         var player = this.GetHitNotificationTarget(attacker);
+        if (player is not null && hitInfo.TotalDamage > 0)
+        {
+            this._damageByPlayer.AddOrUpdate(player, hitInfo.TotalDamage, (_, done) => done + hitInfo.TotalDamage);
+        }
+
         if (player is not null)
         {
             if (isFinalStreakHit.HasValue)
@@ -322,11 +352,13 @@ public abstract class AttackableNpcBase : NonPlayerCharacter, IAttackable
     {
         if (this.ShouldRespawn)
         {
+            var delay = this.Definition.RespawnDelay;
+            delay = RespawnDelayOverride?.Invoke(this, delay) ?? delay;
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    await Task.Delay(this.Definition.RespawnDelay).ConfigureAwait(false);
+                    await Task.Delay(delay).ConfigureAwait(false);
                     await this.RespawnAsync().ConfigureAwait(false);
                 }
                 catch (Exception ex)
@@ -349,6 +381,11 @@ public abstract class AttackableNpcBase : NonPlayerCharacter, IAttackable
                 await player.AfterKilledMonsterAsync().ConfigureAwait(false);
             }
 
+            if (ExperienceToEveryAttacker)
+            {
+                await this.GiveExperienceToOtherAttackersAsync(player).ConfigureAwait(false);
+            }
+
             if (player.GameContext.PlugInManager.GetPlugInPoint<IAttackableGotKilledPlugIn>() is { } plugInPoint)
             {
                 await plugInPoint.AttackableGotKilledAsync(this, attacker).ConfigureAwait(false);
@@ -364,6 +401,43 @@ public abstract class AttackableNpcBase : NonPlayerCharacter, IAttackable
                 }
 
                 _ = this.DropItemDelayedAsync(player, experienceShares); // don't wait for completion.
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gives experience to the players who hit this instance besides the killer and his party: to each
+    /// other party once (through the member who did the most damage) and to each player without one.
+    /// </summary>
+    private async ValueTask GiveExperienceToOtherAttackersAsync(Player killer)
+    {
+        if (this.IsSummonedMonster)
+        {
+            return;
+        }
+
+        var given = new HashSet<object> { (object?)killer.Party ?? killer };
+        foreach (var (attacker, _) in this._damageByPlayer.OrderByDescending(pair => pair.Value))
+        {
+            if (!attacker.IsAlive || attacker.CurrentMap != this.CurrentMap || !given.Add((object?)attacker.Party ?? attacker))
+            {
+                continue;
+            }
+
+            try
+            {
+                if (attacker.Party is { } party)
+                {
+                    await party.DistributeExperienceAfterKillAsync(this, attacker).ConfigureAwait(false);
+                }
+                else
+                {
+                    await attacker.AddExpAfterKillAsync(this).ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                attacker.Logger.LogError(ex, "Couldn't give experience to {Attacker} for {Killed}", attacker, this);
             }
         }
     }

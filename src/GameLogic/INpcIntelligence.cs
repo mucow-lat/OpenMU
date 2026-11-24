@@ -26,6 +26,14 @@ public interface INpcIntelligence
     bool CanWalkOnSafezone { get; }
 
     /// <summary>
+    /// Gets a value indicating whether the NPC can be attacked now.
+    /// </summary>
+    /// <value>
+    ///   <c>true</c> if the NPC can be attacked now; otherwise, <c>false</c>.
+    /// </value>
+    bool CanBeAttacked => true;
+
+    /// <summary>
     /// Registers a hit from an attacker.
     /// </summary>
     /// <param name="attacker">The attacker.</param>

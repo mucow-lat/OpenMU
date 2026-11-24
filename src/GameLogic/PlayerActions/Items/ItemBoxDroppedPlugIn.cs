@@ -19,6 +19,13 @@ using static MUnique.OpenMU.GameLogic.PlugIns.IItemDropPlugIn;
 [Guid("3D15D55D-EEFE-4B5F-89B1-6934AB3F0BEE")]
 public sealed class ItemBoxDroppedPlugIn : IItemDropPlugIn
 {
+    /// <summary>
+    /// Gets or sets how many of the item a box gives: given the box and the item it gives, the number
+    /// of copies dropped. Null (the default) drops one. Set by the season's configuration at the start
+    /// (e.g. two jewels from a high box).
+    /// </summary>
+    public static Func<Item, Item, int>? ItemCount { get; set; }
+
     /// <inheritdoc />
     public async ValueTask HandleItemDropAsync(Player player, Item sourceItem, Point target, ItemDropArguments cancelArgs)
     {
@@ -49,6 +56,14 @@ public sealed class ItemBoxDroppedPlugIn : IItemDropPlugIn
         {
             var droppedItem = new DroppedItem(item, player.Position, player.CurrentMap!, player);
             await player.CurrentMap!.AddAsync(droppedItem).ConfigureAwait(false);
+
+            var count = ItemCount?.Invoke(sourceItem, item) ?? 1;
+            for (var i = 1; i < count; i++)
+            {
+                var copy = new TemporaryItem();
+                copy.AssignValues(item);
+                await player.CurrentMap!.AddAsync(new DroppedItem(copy, player.Position, player.CurrentMap!, player)).ConfigureAwait(false);
+            }
         }
 
         if (dropEffect is not ItemDropEffect.Undefined)

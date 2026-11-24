@@ -235,6 +235,21 @@ public abstract class BaseItemCraftingHandler : IItemCraftingHandler
                 });
 
                 break;
+            case MixResult.DowngradedToZero:
+                itemLink.Items.ForEach(item =>
+                {
+                    var previousLevel = item.Level;
+                    var previousMaxDurability = item.GetMaximumDurabilityOfOnePiece();
+                    item.Level = 0;
+                    if (previousMaxDurability > 0)
+                    {
+                        item.Durability = item.GetMaximumDurabilityOfOnePiece() * item.Durability / previousMaxDurability;
+                    }
+
+                    player.Logger.LogDebug("Item {0} was downgraded from level {1} to 0.", item, previousLevel);
+                });
+
+                break;
             default:
                 if (player.Logger.IsEnabled(LogLevel.Debug))
                 {

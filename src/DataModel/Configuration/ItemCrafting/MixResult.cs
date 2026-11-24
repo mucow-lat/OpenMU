@@ -28,4 +28,10 @@ public enum MixResult
     /// The item will be downgraded 2 or 3 levels and its item option will be removed.
     /// </summary>
     ThirdWingsDowngradedRandom = 3,
+
+    /// <summary>
+    /// The item goes back to level 0 and keeps everything else (MuCow: the Talisman of Chaos Assembly
+    /// in a failed +10 .. +13 mix).
+    /// </summary>
+    DowngradedToZero = 4,
 }

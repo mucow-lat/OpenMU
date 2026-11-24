@@ -25,8 +25,18 @@ public class DurabilityDecayPlugIn : IPeriodicTaskPlugIn
                 && !player.PlayerState.CurrentState.IsDisconnectedOrFinished()
                 && player.Attributes is { } attributes)
             {
-                foreach (var item in player.Inventory?.EquippedItems.Where(item => item.IsTimeDecaying()) ?? [])
+                foreach (var item in player.Inventory?.EquippedItems.Where(item => item.IsTimeDecaying()).ToList() ?? [])
                 {
+                    // MuCow 2026-11-23: the White Wizard's Wizard's Ring (level 0) goes at 0 durability, like the
+                    // transformation rings: it can't be sold, stored, traded or repaired, so it had no way out of the
+                    // inventory. One already worn down to 0 goes on its next tick too.
+                    var isWizardsRing = item.Level == 0 && new ItemIdentifier(item.Definition!.Number, item.Definition.Group) == ItemConstants.WizardsRing;
+                    if (item.Durability == 0.0 && isWizardsRing)
+                    {
+                        await player.DestroyInventoryItemAsync(item).ConfigureAwait(false);
+                        continue;
+                    }
+
                     if (item.Durability > 0.0)
                     {
                         var identifier = new ItemIdentifier(item.Definition!.Number, item.Definition.Group);
@@ -57,7 +67,7 @@ public class DurabilityDecayPlugIn : IPeriodicTaskPlugIn
                             await player.DecreaseItemDurabilityAsync(item, decrement).ConfigureAwait(false);
                         }
 
-                        if (item.Durability == 0.0 && isTransformationRing)
+                        if (item.Durability == 0.0 && (isTransformationRing || isWizardsRing))
                         {
                             await player.DestroyInventoryItemAsync(item).ConfigureAwait(false);
                         }

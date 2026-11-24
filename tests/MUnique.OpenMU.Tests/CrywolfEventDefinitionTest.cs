@@ -62,6 +62,24 @@ public class CrywolfEventDefinitionTest
     }
 
     /// <summary>
+    /// Tests the next start, which the event calendars show: the next configured day and time after now.
+    /// </summary>
+    [Test]
+    public void NextStart()
+    {
+        var definition = new CrywolfEventDefinition();
+        var utc = TimeZoneInfo.Utc;
+
+        // 2026-09-29 is a tuesday, 2026-09-30 a wednesday and 2026-10-03 a saturday.
+        Assert.That(definition.GetNextStartUtc(new DateTime(2026, 09, 29, 12, 0, 0, DateTimeKind.Utc), utc), Is.EqualTo(new DateTime(2026, 09, 30, 20, 30, 0)));
+        Assert.That(definition.GetNextStartUtc(new DateTime(2026, 09, 30, 20, 30, 0, DateTimeKind.Utc), utc), Is.EqualTo(new DateTime(2026, 10, 03, 20, 30, 0)));
+        Assert.That(definition.GetNextStartUtc(new DateTime(2026, 10, 03, 21, 0, 0, DateTimeKind.Utc), utc), Is.EqualTo(new DateTime(2026, 10, 07, 20, 30, 0)));
+
+        definition.StartDays.Clear();
+        Assert.That(definition.GetNextStartUtc(new DateTime(2026, 09, 29, 12, 0, 0, DateTimeKind.Utc), utc), Is.Null);
+    }
+
+    /// <summary>
     /// Tests the scores of the monsters and the durations of the states.
     /// </summary>
     [Test]

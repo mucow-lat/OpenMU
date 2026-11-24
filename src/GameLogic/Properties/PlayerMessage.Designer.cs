@@ -518,7 +518,7 @@ namespace MUnique.OpenMU.GameLogic.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to The crywolf event proceeds from the state {0}..
+        ///   Looks up a localized string similar to The waiting time of the crywolf state {0} is skipped..
         /// </summary>
         public static string CrywolfProceeds {
             get {

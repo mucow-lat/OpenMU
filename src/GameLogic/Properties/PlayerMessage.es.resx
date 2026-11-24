@@ -957,7 +957,7 @@ Ampliaciones de inventario: {18}</value>
     <value>El evento de Crywolf no está activo.</value>
   </data>
   <data name="CrywolfProceeds" xml:space="preserve">
-    <value>El evento de Crywolf continúa desde el estado {0}.</value>
+    <value>Crywolf: se salta la espera del estado {0}.</value>
   </data>
   <data name="CrywolfAltarNotAvailable" xml:space="preserve">
     <value>Ahora no se puede hacer el contrato del altar ({0}) del lobo sagrado.</value>

@@ -4,6 +4,7 @@
 
 namespace MUnique.OpenMU.GameLogic.PlayerActions.Skills;
 
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using MUnique.OpenMU.GameLogic.Attributes;
@@ -21,6 +22,17 @@ using MUnique.OpenMU.PlugIns;
 public class SummonPartySkillPlugin : TargetedSkillPluginBase
 {
     private static readonly int CountdownSeconds = 5;
+
+    /// <summary>When each player was last summoned, set before the teleport starts.</summary>
+    private static readonly ConditionalWeakTable<Player, StrongBox<DateTime>> SummonedAt = new();
+
+    /// <summary>
+    /// Gets when the player was last summoned by its party, if ever: whatever goes on with the player
+    /// (a MU Helper hunting for it) can tell this map change from the others and go along.
+    /// </summary>
+    /// <param name="player">The player.</param>
+    /// <returns>The time (UTC) the summon of the player started, or <c>null</c>.</returns>
+    public static DateTime? LastSummonedAt(Player player) => SummonedAt.TryGetValue(player, out var at) ? at.Value : null;
 
     /// <inheritdoc />
     public override short Key => 63;
@@ -140,6 +152,7 @@ public class SummonPartySkillPlugin : TargetedSkillPluginBase
                 continue;
             }
 
+            SummonedAt.AddOrUpdate(targetPlayer, new StrongBox<DateTime>(DateTime.UtcNow));
             await targetPlayer.TeleportToMapAsync(player.CurrentMap!, targetPoint).ConfigureAwait(false);
         }
     }

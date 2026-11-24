@@ -55,6 +55,13 @@ public class TalkNpcAction
             await Task.Delay(500).ConfigureAwait(false);
             await player.InvokeViewPlugInAsync<IOpenNpcWindowPlugIn>(p => p.OpenNpcWindowAsync(npcStats.NpcWindow != NpcWindow.Undefined ? npcStats.NpcWindow : NpcWindow.Merchant)).ConfigureAwait(false);
             await player.InvokeViewPlugInAsync<IShowMerchantStoreItemListPlugIn>(p => p.ShowMerchantStoreItemListAsync(npcStats.MerchantStore.GetOfferedItems(), StoreKind.Normal)).ConfigureAwait(false);
+
+            // MuCow: a merchant who also mixes (the Chaos Goblin sells the Talisman of Chaos Assembly)
+            // keeps the backup of a mixing NPC, as the dialog path below.
+            if (npcStats.ItemCraftings.Any())
+            {
+                player.BackupInventory = new BackupItemStorage(player.Inventory!.ItemStorage);
+            }
         }
         else
         {

@@ -91,6 +91,9 @@ public sealed class Monster : AttackableNpcBase, IAttackable, IAttacker, ISuppor
     /// <inheritdoc/>
     protected override bool CanSpawnInSafezone => base.CanSpawnInSafezone || this.SummonedBy is not null;
 
+    /// <inheritdoc />
+    protected override bool CanBeAttackedBy(IAttacker attacker) => this._intelligence.CanBeAttacked;
+
     /// <summary>
     /// Determines whether the specified player is being targeted by this monster.
     /// </summary>

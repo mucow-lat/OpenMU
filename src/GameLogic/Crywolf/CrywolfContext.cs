@@ -848,6 +848,13 @@ public sealed class CrywolfContext : IEventStateProvider, IDisposable
         var score = this._scores.GetValueOrDefault(player);
         var rank = this._definition.GetRank(score);
         var experience = this._definition.GetExperience(rank, isDefended);
+        if (experience > 0 && player.Attributes is { } attributes)
+        {
+            // Like in the original game, the rank experience is multiplied by the experience rate of the player.
+            var rate = this._gameContext.ExperienceRate * (attributes[Stats.ExperienceRate] + attributes[Stats.BonusExperienceRate]);
+            experience = (int)Math.Min(int.MaxValue, experience * (double)rate);
+        }
+
         if (experience > 0)
         {
             await player.AddExperienceAsync(experience, null).ConfigureAwait(false);
@@ -1360,7 +1367,7 @@ public sealed class CrywolfContext : IEventStateProvider, IDisposable
             }
 
             var score = this._definition.GetScore(monster.Definition.Number);
-            if (killer is not null && score > 0)
+            if (killer is not null && score > 0 && this.IsBattleRunning)
             {
                 var newScore = this._scores.AddOrUpdate(killer, score, (_, current) => current + score);
                 await killer.ShowLocalizedBlueMessageAsync(nameof(PlayerMessage.CrywolfCurrentScore), newScore).ConfigureAwait(false);
