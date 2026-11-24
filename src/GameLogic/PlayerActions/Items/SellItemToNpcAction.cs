@@ -24,6 +24,12 @@ public class SellItemToNpcAction
     }
 
     /// <summary>
+    /// Gets or sets a check which keeps single items from being sold to a merchant, whatever their
+    /// definition says (e.g. items lent to a player for a while). <c>null</c> allows every item.
+    /// </summary>
+    public static Func<Item, bool>? IsUnsellable { get; set; }
+
+    /// <summary>
     /// Sells the item of the specified slot to the npc merchant.
     /// </summary>
     /// <param name="player">The player.</param>
@@ -47,7 +53,7 @@ public class SellItemToNpcAction
             return false;
         }
 
-        if (item.Definition is { IsSellableToNpc: false })
+        if (item.Definition is { IsSellableToNpc: false } || IsUnsellable?.Invoke(item) == true)
         {
             player.Logger.LogWarning(
                 "Player {0} tried to sell {1} to an npc, which its item definition doesn't allow. The client item data may differ from the server.",
