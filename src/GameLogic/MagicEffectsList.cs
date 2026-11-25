@@ -157,6 +157,7 @@ public class MagicEffectsList : AsyncDisposable
     public async ValueTask AddEffectAsync(MagicEffect effect)
     {
         bool added = false;
+        MagicEffect? renewed = null;
         lock (this._sync)
         {
             if (effect.IsDisposed || effect.IsDisposing)
@@ -172,7 +173,7 @@ public class MagicEffectsList : AsyncDisposable
 
             if (this._contains[effect.Id])
             {
-                added = this.UpdateEffect(effect);
+                added = this.UpdateEffect(effect, out renewed);
             }
             else
             {
@@ -196,6 +197,13 @@ public class MagicEffectsList : AsyncDisposable
         else
         {
             effect.Dispose();
+        }
+
+        // Cast again over a running one: the owner's client hears of the new duration, or its buff
+        // icon keeps counting down the old one (MuCow, 2026-11-25).
+        if (renewed is not null && renewed.Id < InvisibleEffectStartIndex && this._owner is IWorldObserver owner)
+        {
+            await owner.InvokeViewPlugInAsync<IActivateMagicEffectPlugIn>(p => p.ActivateMagicEffectAsync(renewed, this._owner)).ConfigureAwait(false);
         }
     }
 
@@ -362,10 +370,12 @@ public class MagicEffectsList : AsyncDisposable
     /// Updates the effect.
     /// </summary>
     /// <param name="effect">The effect.</param>
+    /// <param name="renewed">The existing entry, when its timer started over with the new duration.</param>
     /// <returns>True, if <paramref name="effect"/> is now tracked and needs activation; false, if it was merged into (or rejected by) the existing entry.</returns>
     /// <remarks>Caller must hold <see cref="_sync"/>.</remarks>
-    private bool UpdateEffect(MagicEffect effect)
+    private bool UpdateEffect(MagicEffect effect, out MagicEffect? renewed)
     {
+        renewed = null;
         MagicEffect magicEffect = this._activeEffects[effect.Id];
         if (magicEffect.IsDisposed || magicEffect.IsDisposing)
         {
@@ -394,6 +404,7 @@ public class MagicEffectsList : AsyncDisposable
         //// This doesn't only save traffic, it also looks better in game.
         magicEffect.Duration = effect.Duration;
         magicEffect.ResetTimer();
+        renewed = magicEffect;
 
         if (magicEffect.PowerUpElements.Select(e => e.Element)
             .SequenceEqual(effect.PowerUpElements.Select(e => e.Element)))
