@@ -65,7 +65,8 @@ public enum PvpHitSource
 /// <param name="DamageMultiplier">Multiplies the final damage, after the combo and the double damage.</param>
 /// <param name="HitChanceMultiplier">Multiplies the chance to hit (the result stays between 3 % and 100 %).</param>
 /// <param name="ShieldShare">The share of the damage the defender's shield (SD) takes; OpenMU's is 0.9.</param>
-public readonly record struct PvpHit(float DamageMultiplier, float HitChanceMultiplier, float ShieldShare);
+/// <param name="ComboBonusMultiplier">Multiplies the combo bonus ((strength + agility + energy) / 2) a combo hit adds; 0 for the original.</param>
+public readonly record struct PvpHit(float DamageMultiplier, float HitChanceMultiplier, float ShieldShare, float ComboBonusMultiplier = 0);
 
 /// <summary>
 /// The modifiers of a skill's effect on players; each 0 for the original.

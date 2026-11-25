@@ -351,7 +351,14 @@ public static class AttackableExtensions
             //        Sleep magic effect is canceled for successful hit (dmg > 0)
             if (isCombo)
             {
-                dmg += (int)attacker.Attributes[Stats.ComboBonus];
+                // The server may scale the combo bonus between players (PvpModifiers).
+                var comboBonus = attacker.Attributes[Stats.ComboBonus];
+                if (pvp.ComboBonusMultiplier > 0)
+                {
+                    comboBonus *= pvp.ComboBonusMultiplier;
+                }
+
+                dmg += (int)comboBonus;
                 attributes |= DamageAttributes.Combo;
             }
 
