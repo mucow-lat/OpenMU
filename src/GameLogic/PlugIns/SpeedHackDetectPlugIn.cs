@@ -21,6 +21,13 @@ using MUnique.OpenMU.PlugIns;
 [Guid("A95A8D2F-A0C3-442E-995C-005B5C1B42D2")]
 public class SpeedHackDetectPlugIn : IFeaturePlugIn, ISupportCustomConfiguration<SpeedHackDetectConfiguration>, ISupportDefaultCustomConfiguration, ISpeedHackCheatCheckPlugIn, IAttackSpeedCheckPlugIn, IPingCheckPlugIn, IWalkRequestValidationPlugIn, IWalkStepPlugIn, IMovementStateResetPlugIn
 {
+    /// <summary>
+    /// Gets or sets who hears every warning that passed the debounce (MuCow's metrics): the player,
+    /// the check ("walk", "position" or "attack"), the warnings in the history and whether the player
+    /// was disconnected for it. It must not throw.
+    /// </summary>
+    public static Action<Player, string, int, bool>? WarningRecorded { get; set; }
+
     private readonly ConditionalWeakTable<Player, SpeedHackState> _playerStates = new();
     private readonly TimeProvider _timeProvider;
     private readonly WalkSpeedCheck _walkCheck;
@@ -126,13 +133,13 @@ public class SpeedHackDetectPlugIn : IFeaturePlugIn, ISupportCustomConfiguration
         if (violationSeverity is not SpeedHackViolationSeverity.None)
         {
             eventArgs.Severity = violationSeverity;
-            await this._violationRecorder.RecordAsync(player, state, config, violationSeverity).ConfigureAwait(false);
+            await this._violationRecorder.RecordAsync(player, state, config, violationSeverity, "walk").ConfigureAwait(false);
         }
         else if (positionMismatchSeverity is not SpeedHackViolationSeverity.None)
         {
             // PlayerMovement validates the offset independently and resynchronizes the client
             // when it's too large. The mismatch still contributes to warnings and punishments.
-            await this._violationRecorder.RecordAsync(player, state, config, positionMismatchSeverity).ConfigureAwait(false);
+            await this._violationRecorder.RecordAsync(player, state, config, positionMismatchSeverity, "position").ConfigureAwait(false);
         }
         else
         {
@@ -162,7 +169,7 @@ public class SpeedHackDetectPlugIn : IFeaturePlugIn, ISupportCustomConfiguration
         }
 
         eventArgs.Severity = severity;
-        await this._violationRecorder.RecordAsync(player, state, config, severity).ConfigureAwait(false);
+        await this._violationRecorder.RecordAsync(player, state, config, severity, "attack").ConfigureAwait(false);
     }
 
     /// <inheritdoc/>

@@ -1233,12 +1233,26 @@ public class Player : AsyncDisposable, IBucketMapObserver, IAttackable, IAttacke
     }
 
     /// <summary>
-    /// Determines whether the player complies with the <see cref="Skill.Requirements"/> of a skill, so that it can use it.
+    /// Determines whether the player complies with the <see cref="Skill.Requirements"/> and the
+    /// <see cref="Skill.QualifiedCharacters"/> of a skill, so that it can learn and use it.
     /// </summary>
+    /// <remarks>
+    /// The class matters because the item that teaches a skill may allow more classes than the skill:
+    /// the initialization treats an item's class rank 2 ("second class") as the first class too, so a
+    /// Dark Knight could learn Death Stab and Rageful Blow, a Fairy Elf Ice Arrow and a Dark Wizard the
+    /// Soul Master scrolls. A skill without qualified classes (e.g. of a potion) is allowed for everyone.
+    /// </remarks>
     /// <param name="skill">The skill.</param>
     /// <returns><c>true</c>, if the player complies with the requirements; Otherwise, <c>false</c>.</returns>
     public bool CompliesRequirements(Skill skill)
     {
+        if (skill.QualifiedCharacters.Count > 0
+            && this.SelectedCharacter?.CharacterClass is { } characterClass
+            && !skill.QualifiedCharacters.Contains(characterClass))
+        {
+            return false;
+        }
+
         return !skill.Requirements.Any(r => r.MinimumValue > this.Attributes![r.Attribute]);
     }
 

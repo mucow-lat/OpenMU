@@ -246,6 +246,7 @@ public sealed class DroppedItem : AsyncDisposable, ILocateable
         player.Logger.LogDebug("Item '{0}' was picked up by player '{1}' and added to his inventory.", this, player);
         var dropper = this._dropper;
         await this.DisposeAsync().ConfigureAwait(false);
+        player.GameContext.PlugInManager.GetPlugInPoint<PlugIns.IItemPickedUpPlugIn>()?.ItemPickedUp(player, this.Item, dropper);
 
         if (!itemWasTemporary)
         {
@@ -281,7 +282,9 @@ public sealed class DroppedItem : AsyncDisposable, ILocateable
         }
 
         player.Logger.LogInformation("Item '{0}' got picked up by player '{1}'. Durability of available stack {2} increased to {3}", this, player, stackTarget, stackTarget.Durability);
+        var stackDropper = this._dropper;
         this.DisposeAndDelete(null);
+        player.GameContext.PlugInManager.GetPlugInPoint<PlugIns.IItemPickedUpPlugIn>()?.ItemPickedUp(player, this.Item, stackDropper);
         if (player.GameContext.PlugInManager.GetPlugInPoint<PlugIns.IItemStackedPlugIn>() is { } itemStackedPlugIn)
         {
             await itemStackedPlugIn.ItemStackedAsync(player, this.Item, stackTarget).ConfigureAwait(false);

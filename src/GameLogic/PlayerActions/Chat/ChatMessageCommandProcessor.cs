@@ -4,6 +4,7 @@
 
 namespace MUnique.OpenMU.GameLogic.PlayerActions.Chat;
 
+using MUnique.OpenMU.GameLogic.PlugIns;
 using MUnique.OpenMU.GameLogic.PlugIns.ChatCommands;
 
 /// <summary>
@@ -27,6 +28,7 @@ public class ChatMessageCommandProcessor : IChatMessageProcessor
             return;
         }
 
+        sender.GameContext.PlugInManager.GetPlugInPoint<IChatCommandReceivedPlugIn>()?.ChatCommandReceived(sender, content.Message, commandHandler.MinCharacterStatusRequirement);
         await commandHandler.HandleCommandAsync(sender, content.Message).ConfigureAwait(false);
     }
 }

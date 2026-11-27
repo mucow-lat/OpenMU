@@ -214,7 +214,7 @@ public sealed class CastleSiegeTaxProvider
                 return false;
             }
 
-            return this.TryPayAndCollect(player, context, 0, fee);
+            return this.TryPayAndCollect(player, context, 0, fee, nameof(CastleSiegeTaxType.HuntZone));
         }
         finally
         {
@@ -273,12 +273,12 @@ public sealed class CastleSiegeTaxProvider
 
         if (!IsEconomyActive(context))
         {
-            return player.TryRemoveMoney((int)baseCost);
+            return player.TryRemoveMoney((int)baseCost, callerMember: taxType.ToString());
         }
 
         if (GetTax(context, taxType) == 0)
         {
-            return player.TryRemoveMoney((int)baseCost);
+            return player.TryRemoveMoney((int)baseCost, callerMember: taxType.ToString());
         }
 
         var persistentGuildId = await GetPersistentAllianceMasterGuildIdAsync(player).ConfigureAwait(false);
@@ -287,13 +287,13 @@ public sealed class CastleSiegeTaxProvider
         {
             if (!IsEconomyActive(context))
             {
-                return player.TryRemoveMoney((int)baseCost);
+                return player.TryRemoveMoney((int)baseCost, callerMember: taxType.ToString());
             }
 
             var isExempt = persistentGuildId == context.SiegeData.OwnerGuildId;
             var rate = isExempt ? 0 : GetTax(context, taxType);
             var tax = checked((baseCost * rate) / 100);
-            return this.TryPayAndCollect(player, context, baseCost, tax);
+            return this.TryPayAndCollect(player, context, baseCost, tax, taxType.ToString());
         }
         finally
         {
@@ -305,7 +305,8 @@ public sealed class CastleSiegeTaxProvider
         Player player,
         CastleSiegeContext context,
         long baseCost,
-        long tax)
+        long tax,
+        string reason)
     {
         var totalCost = checked(baseCost + tax);
         if (totalCost is < 0 or > int.MaxValue)
@@ -318,7 +319,7 @@ public sealed class CastleSiegeTaxProvider
             return false;
         }
 
-        if (!player.TryRemoveMoney((int)totalCost))
+        if (!player.TryRemoveMoney((int)totalCost, callerMember: reason))
         {
             return false;
         }

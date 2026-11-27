@@ -57,11 +57,13 @@ internal sealed class SpeedHackViolationRecorder
     /// <param name="state">The player state.</param>
     /// <param name="config">The configuration.</param>
     /// <param name="severity">The severity which was detected.</param>
+    /// <param name="check">Which check found it, for <see cref="SpeedHackDetectPlugIn.WarningRecorded"/>.</param>
     /// <returns>The task.</returns>
-    public async ValueTask RecordAsync(Player player, SpeedHackState state, SpeedHackDetectConfiguration config, SpeedHackViolationSeverity severity)
+    public async ValueTask RecordAsync(Player player, SpeedHackState state, SpeedHackDetectConfiguration config, SpeedHackViolationSeverity severity, string check = "")
     {
         var now = this._timeProvider.GetTimestamp();
         ViolationPolicy.Sanction sanction;
+        int warnings;
         lock (state.Lock)
         {
             // Isolated blips within the debounce window are dropped for every severity, so a
@@ -84,12 +86,22 @@ internal sealed class SpeedHackViolationRecorder
             }
 
             player.Logger.LogWarning("Speedhack warning issued for player {0}. Total warnings in last hour: {1}", player.Name, state.AlertTimes.Count);
+            warnings = state.AlertTimes.Count;
             sanction = ViolationPolicy.DecideSanction(config, state.AlertTimes.Count, CanPunish(player), player.Account is not null);
             if (sanction.BanAccount && player.Account is { } account)
             {
                 player.Logger.LogError("Player {0} exceeded speedhack warning limit. Banning account {1} and disconnecting.", player.Name, account.LoginName);
                 account.State = AccountState.Banned;
             }
+        }
+
+        try
+        {
+            SpeedHackDetectPlugIn.WarningRecorded?.Invoke(player, check, warnings, sanction.BanAccount || sanction.DisconnectPlayer);
+        }
+        catch
+        {
+            // The metrics must never disturb the game.
         }
 
         if (sanction.BanAccount)
