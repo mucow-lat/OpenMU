@@ -256,7 +256,7 @@ public sealed class Party : AsyncDisposable
                         .Where(p => p.CurrentMap == killer.CurrentMap
                                     && !p.IsAtSafezone()
                                     && p.IsAlive
-                                    && (p == killer || killer.Observers.Contains(p))));
+                                    && IsNearKiller(p, killer)));
             }
 
             if (this._distributionList.Count == 0)
@@ -274,6 +274,31 @@ public sealed class Party : AsyncDisposable
         {
             this._distributionList.Clear();
         }
+    }
+
+    /// <summary>
+    /// Determines whether a party member shares the killer's experience and quest drops: on the same map
+    /// and within the configured view range of the killer, the same distance for everyone. Whether the
+    /// member sees the killer is not asked, because a client may ask to see farther
+    /// (<see cref="Player.SetInfoRangeAsync"/>) and would get the experience from farther too.
+    /// </summary>
+    /// <param name="member">The party member.</param>
+    /// <param name="killer">The killer who is a party member.</param>
+    /// <returns><c>True</c>, if the member is near enough.</returns>
+    private static bool IsNearKiller(Player member, IObservable killer)
+    {
+        if (ReferenceEquals(member, killer))
+        {
+            return true;
+        }
+
+        if (killer is not ILocateable { CurrentMap: { } map } locateable)
+        {
+            return member is IWorldObserver observer && killer.Observers.Contains(observer);
+        }
+
+        return member.CurrentMap == map
+               && member.GetDistanceTo(locateable) <= member.GameContext.Configuration.InfoRange;
     }
 
     /// <summary>
@@ -518,7 +543,7 @@ public sealed class Party : AsyncDisposable
             this._distributionList.AddRange(
                 this._partyMembers.OfType<Player>()
                     .Where(p => p.Attributes is { }
-                                && (p == killer || killer.Observers.Contains(p))));
+                                && IsNearKiller(p, killer)));
         }
 
         if (this._distributionList.Count == 0)
