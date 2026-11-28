@@ -69,6 +69,13 @@ public class DefaultDropGenerator : IDropGenerator
     /// </summary>
     public static Func<DropItemGroup, IReadOnlyList<double>?>? ExcellentOptionChances { get; set; }
 
+    /// <summary>
+    /// Gets or sets the weight of an item when a random item is chosen out of the possible ones (1 = as
+    /// any other; 0.5 = half as often). Null (the default) gives every item the same weight. Set by the
+    /// season's configuration at the start (e.g. the skill scrolls and orbs, which weighed as an armor piece).
+    /// </summary>
+    public static Func<ItemDefinition, double>? RandomItemWeight { get; set; }
+
     private readonly byte _excellentItemDropLevelDelta;
 
     /// <summary>
@@ -480,12 +487,38 @@ public class DefaultDropGenerator : IDropGenerator
 
         var item = new TemporaryItem
         {
-            Definition = possibleItems.ElementAt(this._randomizer.NextInt(0, possibleItems.Count)),
+            Definition = this.SelectRandomItemDefinition(possibleItems),
         };
 
         this.ApplyRandomOptions(item);
 
         return item;
+    }
+
+    private ItemDefinition SelectRandomItemDefinition(ICollection<ItemDefinition> possibleItems)
+    {
+        if (RandomItemWeight is not { } weightOf)
+        {
+            return possibleItems.ElementAt(this._randomizer.NextInt(0, possibleItems.Count));
+        }
+
+        var total = possibleItems.Sum(definition => Math.Max(0, weightOf(definition)));
+        if (total <= 0)
+        {
+            return possibleItems.ElementAt(this._randomizer.NextInt(0, possibleItems.Count));
+        }
+
+        var roll = this._randomizer.NextDouble() * total;
+        foreach (var definition in possibleItems)
+        {
+            roll -= Math.Max(0, weightOf(definition));
+            if (roll < 0)
+            {
+                return definition;
+            }
+        }
+
+        return possibleItems.Last();
     }
 
     private void ApplyRandomAncientOption(Item item)

@@ -63,6 +63,12 @@ public sealed class Monster : AttackableNpcBase, IAttackable, IAttacker, ISuppor
     }
 
     /// <summary>
+    /// Gets or sets a filter of the movement speed factor (e.g. the slow of an ice skill): given the
+    /// monster and its factor, it returns the factor the monster walks with. Null keeps the factor.
+    /// </summary>
+    public static Func<Monster, double, double>? MovementSpeedFactorFilter { get; set; }
+
+    /// <summary>
     /// Gets a value indicating whether this <see cref="Monster"/> is walking.
     /// </summary>
     /// <value>
@@ -404,8 +410,9 @@ public sealed class Monster : AttackableNpcBase, IAttackable, IAttacker, ISuppor
     private double GetMovementSpeedFactor()
     {
         var movementSpeedFactor = this.Attributes[Stats.MovementSpeedFactor];
+        var factor = movementSpeedFactor > 0 ? movementSpeedFactor : 1.0;
 
-        return movementSpeedFactor > 0 ? movementSpeedFactor : 1.0;
+        return MovementSpeedFactorFilter is { } filter ? filter(this, factor) : factor;
     }
 
     /// <summary>

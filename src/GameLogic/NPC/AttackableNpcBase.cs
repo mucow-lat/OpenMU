@@ -318,7 +318,7 @@ public abstract class AttackableNpcBase : NonPlayerCharacter, IAttackable
     /// <param name="amount">The maximum amount of health to restore.</param>
     /// <param name="maximumHealth">The maximum health after the restoration.</param>
     /// <returns>The restored health.</returns>
-    protected int RestoreHealth(int amount, int maximumHealth)
+    public int RestoreHealth(int amount, int maximumHealth)
     {
         if (amount <= 0 || maximumHealth <= 0)
         {
