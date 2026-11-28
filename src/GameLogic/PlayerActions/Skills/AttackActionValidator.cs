@@ -13,6 +13,15 @@ using MUnique.OpenMU.GameLogic.PlugIns;
 /// </summary>
 internal static class AttackActionValidator
 {
+    /// <summary>The item group of bows and crossbows.</summary>
+    private const byte BowGroup = 4;
+
+    /// <summary>
+    /// The skills shot with a bow: Triple Shot (24), Ice Arrow (51), Penetration (52), Multi-Shot (235),
+    /// and the master skills built on them (Multi-Shot 411/431, Triple Shot 414/418, Penetration 416, Ice Arrow 424).
+    /// </summary>
+    private static readonly HashSet<short> BowSkills = [24, 51, 52, 235, 411, 414, 416, 418, 424, 431];
+
     /// <summary>
     /// Determines whether the player is currently unable to act due to a status effect.
     /// </summary>
@@ -88,6 +97,20 @@ internal static class AttackActionValidator
             return false;
         }
 
+        // The bow skills need a bow or crossbow in hand, as in the original: without one the ammunition
+        // rate above is 0 (it comes from the bow) and an elf cast Penetration with a rapier (2026-11-28).
+        // Infinity Arrow also brings the rate to 0, so the check is on the weapon, not the rate.
+        if (BowSkills.Contains(skill.Number) && !HoldsBow(player))
+        {
+            return false;
+        }
+
         return !IsAttackSkill(skill) || await player.IsAttackAllowedAsync(skill).ConfigureAwait(false);
     }
+
+    /// <summary>Whether a bow or crossbow is in one of the player's hands.</summary>
+    private static bool HoldsBow(Player player) =>
+        player.Inventory is { } inventory
+        && (inventory.GetItem(InventoryConstants.LeftHandSlot)?.Definition?.Group == BowGroup
+            || inventory.GetItem(InventoryConstants.RightHandSlot)?.Definition?.Group == BowGroup);
 }
